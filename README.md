@@ -1,0 +1,24 @@
+# Calcritique
+
+Calculateur de dégâts moderne, en français et en anglais, dédié à Pokémon Champions.
+
+- Logiciel Windows : téléchargez le fichier `.exe` de la dernière version dans l'onglet **Releases**. Le logiciel se met à jour tout seul.
+- Version site : https://meiynas.github.io/calcritique/
+
+Le brief complet du projet (objectifs, fonctionnalités, décisions) est dans `CLAUDE.md`.
+
+## Pour Claude : comment est organisé le projet
+
+- `src/` : l'interface (React + TypeScript + Tailwind). `src/updater.ts` gère la mise à jour automatique.
+- `src-tauri/` : l'enveloppe "logiciel Windows" (Tauri 2). `tauri.conf.json` contient la clé publique des mises à jour et l'adresse où le logiciel cherche les nouvelles versions.
+- `.github/workflows/release.yml` : fabrique l'installeur Windows et le publie sur GitHub Releases quand on pousse une étiquette `vX.Y.Z`.
+- `.github/workflows/pages.yml` : publie la version site sur GitHub Pages à chaque changement sur `main`.
+- `secrets/` (ignoré par Git) : clés de signature des mises à jour. La clé privée est aussi dans les secrets du dépôt GitHub.
+
+## Publier une nouvelle version
+
+1. Changer le numéro de version dans `package.json` (et `src-tauri/Cargo.toml`).
+2. Enregistrer les changements (`git commit`) puis poser l'étiquette : `git tag v0.2.0 && git push origin main --tags`.
+3. GitHub fabrique l'installeur (environ 10 minutes) et le publie dans Releases. Les logiciels déjà installés proposent la mise à jour au prochain lancement.
+
+Calcritique n'est pas affilié à Nintendo, Game Freak ou The Pokémon Company.
