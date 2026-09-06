@@ -280,6 +280,7 @@ Ajouté en v1.10.1 (6 septembre 2026) : mise à jour automatique des données.
 - scripts/fetch-usage.mjs : récupère l'index puis /api/battle/Doubles/<battleName> pour chaque Pokémon ayant des données Doubles, et écrit src/data/usage.json (clé = showdownId, name = nom affiché, top 10 par catégorie, spreads [pv, atq, déf, asp, dsp, vit, %], partenaires par rang). Ne réécrit pas le fichier si rien n'a changé ; refuse d'écrire s'il obtient moins de 100 Pokémon. Format API constaté : rows avec category move / held_item / ability / stat_alignment (natures, stat_up / stat_down) / stat_points (hp_points...) / teammate, champ percentage_value.
 - scripts/bump-version.mjs : x.y.Z -> x.y.Z+1 dans package.json, Cargo.toml (et Cargo.lock s'il existe).
 - .github/workflows/data-refresh.yml : chaque nuit (cron 0 0 UTC = 2 h à Paris en été, 1 h en hiver) ou à la demande : fetch-usage, npm update @smogon/calc, et si src/data/usage.json ou package.json / package-lock.json ont changé : tests, version +1, commit par "calcritique-bot", étiquette, push, puis appel direct de release.yml (installeur) et pages.yml (site), car un push fait avec le jeton du robot ne déclenche pas les autres workflows. release.yml et pages.yml acceptent désormais workflow_call (release.yml prend l'étiquette en entrée).
+- Premier essai (v1.10.2, publiée par le robot) : le fetch des statistiques a échoué (cause à lire dans les annotations du run, désormais émises en "::error::"), mais la version a quand même été publiée car package-lock.json portait encore "1.4.0" (désormais aligné par bump-version). Le déploiement du site appelé depuis data-refresh exigeait les permissions explicites sur le job appelant (ajoutées en v1.10.3).
 - Ce qui reste manuel : nouveaux Pokémon / attaques (fichiers names, extra, learnsets, movedesc, sprites à régénérer depuis PokéAPI, et le moteur doit les connaître).
 
 Limites connues à traiter plus tard :
@@ -297,6 +298,8 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.10.3 : correctifs du workflow de mise à jour (permissions des jobs appelés, versions de package-lock, erreurs annotées).
+- 2026-09-06 : v1.10.2 : première version publiée automatiquement par le robot (test du workflow).
 - 2026-09-06 : v1.10.1 : mise à jour automatique nocturne des statistiques d'usage et du moteur (workflow data-refresh), publication automatique d'une nouvelle version quand les données changent.
 - 2026-09-06 : v1.10.0 : set automatique, speed tiers sur tout le pool avec filtre, en-têtes hors des boîtes, table des types défense / attaque.
 - 2026-09-06 : v1.9.2 : composeur de sets populaires (usage), boutons équipe 💾 / 📂 dans les colonnes, fusion des variantes plus lentes dans les speed tiers. Constat : pas de sets complets ni d'équipes dans l'API d'usage.

@@ -13,7 +13,14 @@ async function getJSON(url) {
   return r.json()
 }
 
-const index = await getJSON(`${BASE}/api/index`)
+// Les erreurs sont aussi émises au format "::error::" pour apparaître dans les annotations GitHub Actions
+const fail = (msg) => { console.error(`::error::fetch-usage : ${msg}`); process.exit(1) }
+let index
+try {
+  index = await getJSON(`${BASE}/api/index`)
+} catch (e) {
+  fail(`index inaccessible : ${e.message} ${e.cause ? '(' + e.cause + ')' : ''}`)
+}
 const season = index.battleDataFolders?.[0] ?? 'Current'
 const date = (index.generatedAt ?? new Date().toISOString()).slice(0, 10)
 const list = (index.pokemon ?? []).filter((p) => (p.battleDataCsvs ?? []).some((c) => String(c).includes('Doubles')))
@@ -47,10 +54,7 @@ for (const p of list) {
   await new Promise((res) => setTimeout(res, 150)) // on ménage le serveur
 }
 
-if (Object.keys(data).length < 100) {
-  console.error('Trop peu de Pokémon récupérés, fichier non modifié.')
-  process.exit(1)
-}
+if (Object.keys(data).length < 100) fail(`trop peu de Pokémon récupérés (${Object.keys(data).length}), fichier non modifié`)
 // Ne pas écraser si rien n'a changé (évite les versions inutiles)
 let old = null
 try { old = JSON.parse(readFileSync(OUT, 'utf8')) } catch { /* pas de fichier */ }
