@@ -339,3 +339,41 @@ test('Clone : encaisse une attaque simple, une attaque multi-coups le casse et c
   assert.equal(kc2.hits[0].subDamage, undefined)
   assert.ok(kc2.hits[0].damage > 0)
 })
+
+test('tour : Peau Dure et Casque Brut blessent le lanceur au contact (par coup pour les multi-coups), pas avec Séisme ni Patins Protecteurs', async () => {
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { defaultState } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '1v1'
+  st.teams.left[0] = defaultPokemon('Kingambit', { moves: ['Kowtow Cleave', '', '', ''], target: 0 })
+  st.teams.right[0] = defaultPokemon('Garchomp', { ability: 'Rough Skin', item: 'Rocky Helmet', moves: ['Protect', '', '', ''] })
+  st.active = { left: [0], right: [0] }
+  const r = simulateTurn(st)
+  // Abri : aucun contact, donc rien
+  const kc = r.scenarios.average.actions.find((a) => a.action.move === 'Kowtow Cleave')!
+  assert.ok(!kc.self || !kc.self.some((c) => c.reason === 'roughSkin' || c.reason === 'rockyHelmet'))
+  st.teams.right[0].moves[0] = 'Earthquake'
+  const r2 = simulateTurn(st)
+  const kc2 = r2.scenarios.average.actions.find((a) => a.action.move === 'Kowtow Cleave')!
+  const maxHP = kc2.hits[0] ? r2.scenarios.average.actions.find((a) => a.action.move === 'Earthquake')!.hits[0].maxHP : 0
+  const rs = kc2.self!.find((c) => c.reason === 'roughSkin')!
+  const rh = kc2.self!.find((c) => c.reason === 'rockyHelmet')!
+  assert.equal(rs.delta, -Math.floor(maxHP / 8))
+  assert.equal(rh.delta, -Math.floor(maxHP / 6))
+  // Séisme (pas de contact) sur Carchacrok : rien
+  const eq = r2.scenarios.average.actions.find((a) => a.action.move === 'Earthquake')!
+  assert.ok(!eq.self || !eq.self.some((c) => c.reason === 'roughSkin'))
+  // Patins Protecteurs : plus de dégâts de contact
+  st.teams.left[0].item = 'Protective Pads'
+  const r3 = simulateTurn(st)
+  const kc3 = r3.scenarios.average.actions.find((a) => a.action.move === 'Kowtow Cleave')!
+  assert.ok(!kc3.self || !kc3.self.some((c) => c.reason === 'roughSkin'))
+  // Multi-coups de contact : Dé Pipé + Bombe Pop = 4 coups, donc 4 fois 1/8
+  st.teams.left[0] = defaultPokemon('Maushold', { item: 'Loaded Dice', moves: ['Population Bomb', '', '', ''], target: 0 })
+  st.teams.right[0].item = '' // sans Casque Brut, sinon 4 x (1/8 + 1/6) met Maushold KO
+  const r4 = simulateTurn(st)
+  const pb = r4.scenarios.average.actions.find((a) => a.action.move === 'Population Bomb')!
+  const rs4 = pb.self!.find((c) => c.reason === 'roughSkin')!
+  const mausHP = r4.scenarios.average.actions.find((a) => a.action.move === 'Earthquake')!.hits[0].maxHP
+  assert.equal(rs4.delta, -Math.floor(mausHP / 8) * 4)
+})

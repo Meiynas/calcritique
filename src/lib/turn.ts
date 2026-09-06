@@ -7,7 +7,7 @@
 import type { AppState, FieldState, PokemonState, SideKey } from '../model'
 import { otherSide, SWITCH_IN } from '../model'
 import { switchIn as applySwitchIn } from './switch'
-import { endOfTurnFor, intimidateEffect, lifeOrbLoss, selfChangesAfterHit, sitrusHeal, TERRAIN_ABILITIES, WEATHER_ABILITIES, type EndEffect, type SelfChange } from './residual'
+import { contactDamage, endOfTurnFor, intimidateEffect, lifeOrbLoss, selfChangesAfterHit, sitrusHeal, TERRAIN_ABILITIES, WEATHER_ABILITIES, type EndEffect, type SelfChange } from './residual'
 import { buildPokemon, computeMove, effectiveSpeed, finalStats, moveInfo, movePriority, PROTECT_MOVES, type MoveResult } from './engine'
 const BOOST_MULT = [2 / 8, 2 / 7, 2 / 6, 2 / 5, 2 / 4, 2 / 3, 1, 3 / 2, 4 / 2, 5 / 2, 6 / 2, 7 / 2, 8 / 2]
 import { cantActChance, CONFUSION_MOVES, confusionChance, flinchChance, SELF_THAW_MOVES, statusChance, STATUS_MOVES as STATUS_TABLE, thawsTarget, typesOf, type InflictedStatus } from './status'
@@ -439,16 +439,18 @@ export function simulateTurn(state: AppState): TurnResult {
           let subDamage = 0
           let subBroken = false
           let rolled = pick.damage
+          let realHits = Math.max(1, normal.hits) // coups qui touchent le Pokémon lui-même (pas le Clone)
           if (sub[tk] > 0 && !pick.missed && !bypassSub(action.move, attackerState)) {
             const nHits = Math.max(1, normal.hits)
             const perHit = rolled / nHits
-            if (rolled <= sub[tk]) { subDamage = rolled; sub[tk] -= rolled; rolled = 0 }
+            if (rolled <= sub[tk]) { subDamage = rolled; sub[tk] -= rolled; rolled = 0; realHits = 0 }
             else {
               const consumed = Math.min(nHits, Math.ceil(sub[tk] / Math.max(1, perHit)))
               subDamage = sub[tk]
               sub[tk] = 0
               subBroken = true
               rolled = Math.max(0, Math.round(perHit * (nHits - consumed)))
+              realHits = nHits - consumed
             }
           }
           const dmg = Math.min(cur.hp, rolled)
@@ -479,6 +481,8 @@ export function simulateTurn(state: AppState): TurnResult {
           if (!ko) { const sh = trySitrus(tk); if (sh > 0) sitrusHeals.push({ target, heal: sh }) }
           if (!pick.missed && dmg > 0) landed = true
           for (const sc2 of selfChangesAfterHit(action.move, attackerState, mons[tk], dmg, hp[ak].maxHP)) self.push(sc2)
+          // Peau Dure / Épine de Fer / Casque Brut : la cible blesse le lanceur à chaque coup de contact reçu (pas via un Clone)
+          if (!pick.missed && dmg > 0 && realHits > 0) for (const sc2 of contactDamage(action.move, attackerState, mons[tk], hp[ak].maxHP, realHits)) self.push(sc2)
           // Baisse de Vitesse garantie : l'ordre sera recalculé pour les actions suivantes
           if (!pick.missed && !ko && SPEED_DROP_MOVES.includes(action.move)) {
             const tp = mons[tk]

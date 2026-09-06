@@ -53,7 +53,7 @@ const fr = {
     intimidateCompetitive: 'Intimidation : Atq −1, Atq Spé +2 (Battant)',
     intimidateContrary: 'Intimidation : Atq +1 (Contestation)',
   },
-  selfReason: { drain: 'drain', recoil: 'contrecoup', lifeOrb: 'Orbe Vie', sitrus: 'Baie Sitrus' },
+  selfReason: { drain: 'drain', recoil: 'contrecoup', lifeOrb: 'Orbe Vie', sitrus: 'Baie Sitrus', roughSkin: 'Peau Dure / Épine de Fer', rockyHelmet: 'Casque Brut' },
   endReason: {
     sitrus: 'Baie Sitrus', sand: 'tempête de sable', hail: 'grêle', grassy: 'Terrain Herbu', leftovers: 'Restes', blackSludge: 'Boue Noire',
     burn: 'brûlure', poison: 'poison', toxic: 'poison grave', poisonHeal: 'Soin Poison', leechSeed: 'Vampigraine', leechSeedHeal: 'Vampigraine (soin)',
@@ -448,7 +448,7 @@ const en: Dict = {
     intimidateCompetitive: 'Intimidate: Atk −1, SpA +2 (Competitive)',
     intimidateContrary: 'Intimidate: Atk +1 (Contrary)',
   },
-  selfReason: { drain: 'drain', recoil: 'recoil', lifeOrb: 'Life Orb', sitrus: 'Sitrus Berry' },
+  selfReason: { drain: 'drain', recoil: 'recoil', lifeOrb: 'Life Orb', sitrus: 'Sitrus Berry', roughSkin: 'Rough Skin / Iron Barbs', rockyHelmet: 'Rocky Helmet' },
   endReason: {
     sitrus: 'Sitrus Berry', sand: 'sandstorm', hail: 'hail', grassy: 'Grassy Terrain', leftovers: 'Leftovers', blackSludge: 'Black Sludge',
     burn: 'burn', poison: 'poison', toxic: 'bad poison', poisonHeal: 'Poison Heal', leechSeed: 'Leech Seed', leechSeedHeal: 'Leech Seed (heal)',

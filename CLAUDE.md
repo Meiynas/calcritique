@@ -22,7 +22,7 @@ Calcritique : un calculateur de dégâts moderne, bilingue (français / anglais)
   - Avant un gros choix (technologie, structure, hébergement, refonte), proposer 2 ou 3 options avec avantages / inconvénients, puis laisser l'humain choisir.
   - Travailler par petites étapes visibles et testables (une fonctionnalité à la fois, qu'on peut ouvrir dans le navigateur et essayer).
   - Ne pas faire "n'importe quoi" : ce projet doit rester simple à maintenir, sans dépendances exotiques.
-- Style d'écriture : jamais de tiret cadratin (le signe "—"). Utiliser des virgules, des deux-points ou des parenthèses.
+- Style d'écriture : jamais de tiret cadratin (le tiret long ; utiliser le tiret normal "-"). Utiliser des virgules, des deux-points ou des parenthèses.
 
 ## 3. Pourquoi refaire un calculateur : les problèmes du calc Showdown
 
@@ -314,6 +314,10 @@ Ajouté en v1.15.0 (6 septembre 2026) : Clone, multi-coups, nettoyage.
 - Multi-coups : Dé Pipé (Loaded Dice) garantit 4 coups sur les attaques 2-5 coups et Bombe Pop (engine.multiHitCount, passé au moteur via l'option hits) ; Multi-Coups = 5 (déjà géré par le moteur). MoveResult.hits exposé.
 - Grand Nettoyage : retire les pièges des deux côtés et TOUS les Clones, +1 Atq / Vit au lanceur. Anti-Brume : pièges des deux côtés et murs adverses. Tour Rapide : pièges de son côté, +1 Vit. (Effets valables pour la suite du tour simulé.) 19 tests.
 
+Ajouté en v1.15.2 (6 septembre 2026) : dégâts de contact.
+- Peau Dure / Épine de Fer (1/8 des PV max du lanceur par coup de contact) et Casque Brut (1/6 par coup) dans le déroulé du tour (residual.contactDamage, ligne "PV du lanceur" avec la raison). Par coup pour les multi-coups (Dé Pipé compris) ; rien si l'attaque n'est pas de contact, si elle rate, si Abri la bloque, si le Clone a tout encaissé, ou si le lanceur a Garde Magik, Longue Portée ou les Patins Protecteurs. 20 tests.
+- Plus aucun tiret cadratin dans le projet (descriptions d'attaques en anglais nettoyées, le script build-movedesc.py les remplace désormais par un tiret normal).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -329,6 +333,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.15.2 : Peau Dure / Épine de Fer / Casque Brut dans le tour ; plus de tirets cadratins nulle part.
 - 2026-09-06 : v1.15.1 : analyse par attaque simplifiée (trimOffensive / trimDefensive : seulement les seuils atteignables avec des SP, plus le plus haut "déjà" et le plus bas "hors de portée", et l'inverse en défense) ; les attaques sur 2 tours et Mitra-Poing (TWO_TURN_MOVES déplacé dans advice.ts) sont écartées des "autres attaques qui OHKO".
 - 2026-09-06 : v1.15.0 : Clone (case + mécanique dans le tour, multi-coups qui traversent), Dé Pipé, Grand Nettoyage / Anti-Brume / Tour Rapide.
 - 2026-09-06 : v1.14.0 : Provoc, confusion (case Confus + attaques qui confusent), Farceur contre Ténèbres, Distorsion posée en cours de tour.

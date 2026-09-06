@@ -25,7 +25,7 @@ with open(POKEAPI / "move_flavor_text.csv", encoding="utf-8", newline="") as f:
         key = (r["move_id"], r["language_id"])
         vg = int(r["version_group_id"])
         if key not in best or vg > best[key][0]:
-            txt = " ".join(r["flavor_text"].replace("­\n", "").replace("\n", " ").split())
+            txt = " ".join(r["flavor_text"].replace("­\n", "").replace("\n", " ").replace("\u2014", " - ").split())
             best[key] = (vg, txt)
 
 known = set(NAMES["moves"].keys())

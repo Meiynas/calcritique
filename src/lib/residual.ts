@@ -4,7 +4,7 @@
 import type { FieldState, PokemonState, SideKey, StatKey } from '../model'
 type Weather = FieldState['weather']
 type Terrain = FieldState['terrain']
-import { moveInfo } from './engine'
+import { effectiveAbility, moveInfo } from './engine'
 import { isGrounded } from './switch'
 import { FLINCH_MOVES, STATUS_MOVES, typesOf } from './status'
 
@@ -21,8 +21,28 @@ export const RECOIL_MOVES: Record<string, number> = {
   'Head Smash': 1 / 2, 'Light of Ruin': 1 / 2,
 }
 
-export type SelfReason = 'drain' | 'recoil' | 'lifeOrb' | 'sitrus'
+export type SelfReason = 'drain' | 'recoil' | 'lifeOrb' | 'sitrus' | 'roughSkin' | 'rockyHelmet'
 export interface SelfChange { reason: SelfReason; delta: number }
+
+/** Attaque de contact ? (Peau Dure, Épine de Fer, Casque Brut, Poing Invisible...) */
+export function isContactMove(move: string, attacker: PokemonState): boolean {
+  const info = moveInfo(move)
+  if (!info?.flags?.contact) return false
+  if (attacker.item === 'Protective Pads' || effectiveAbility(attacker) === 'Long Reach') return false
+  return true
+}
+
+/** Dégâts rendus au lanceur par la cible touchée au contact : Peau Dure / Épine de Fer (1/8 par coup), Casque Brut (1/6 par coup).
+    Pas de dégâts si le lanceur a Garde Magik, des Patins Protecteurs ou Longue Portée, ni si l'attaque n'est pas de contact. */
+export function contactDamage(move: string, attacker: PokemonState, target: PokemonState, attackerMaxHP: number, hits: number): SelfChange[] {
+  const out: SelfChange[] = []
+  if (!isContactMove(move, attacker) || effectiveAbility(attacker) === 'Magic Guard') return out
+  const n = Math.max(1, hits)
+  const ta = effectiveAbility(target)
+  if (ta === 'Rough Skin' || ta === 'Iron Barbs') out.push({ reason: 'roughSkin', delta: -Math.max(1, Math.floor(attackerMaxHP / 8)) * n })
+  if (target.item === 'Rocky Helmet') out.push({ reason: 'rockyHelmet', delta: -Math.max(1, Math.floor(attackerMaxHP / 6)) * n })
+  return out
+}
 
 /** Variation de PV du lanceur après une frappe (drain, contrecoup). Delta positif = soin. */
 export function selfChangesAfterHit(move: string, attacker: PokemonState, target: PokemonState, damage: number, maxHP: number): SelfChange[] {
