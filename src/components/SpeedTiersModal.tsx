@@ -96,6 +96,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose, onU
   const [side, setSide] = useState<SideKey>(initialSide ?? 'left')
   const [manage, setManage] = useState(false)
   const [q, setQ] = useState('')
+  const [teamsOnly, setTeamsOnly] = useState(false)
   const update = (c: SpeedTiersConfig) => { setConfig(c); saveSpeedTiers(c) }
 
   const me: PokemonState = state.teams[side][state.selected[side]]
@@ -176,7 +177,10 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose, onU
   }, [config, lang, mySpeed, myInfo, natureMod, factor, state, side, t])
 
   const nq = normalize(q)
-  const shown = nq ? rows.filter((r) => normalize(label('species', r.species, lang)).includes(nq) || normalize(r.species).includes(nq)) : rows
+  const teamSpecies = new Set([...state.teams.left, ...state.teams.right].map((p) => p.species).filter(Boolean))
+  const shown = rows
+    .filter((r) => !teamsOnly || teamSpecies.has(r.species))
+    .filter((r) => !nq || normalize(label('species', r.species, lang)).includes(nq) || normalize(r.species).includes(nq))
   const faster = rows.filter((r) => r.speed > mySpeed).length
   const slower = rows.filter((r) => r.speed < mySpeed).length
   const ties = rows.filter((r) => r.speed === mySpeed).length
@@ -199,6 +203,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose, onU
           </span>
         )}
         <input className="input !w-44 !py-0.5" placeholder={t.speedTiersSearch} value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" onClick={() => setTeamsOnly((v) => !v)} aria-pressed={teamsOnly} className={'rounded border px-2 py-1 ' + (teamsOnly ? 'border-accent bg-accent/20 text-text' : 'border-border hover:text-text')}>{t.speedTeamsOnly}</button>
         <label className="ml-auto flex items-center gap-1" title={t.speedScarfAllHint}>
           <input type="checkbox" checked={config.scarfAll} onChange={(e) => update({ ...config, scarfAll: e.target.checked })} />
           {t.speedScarfAll}
