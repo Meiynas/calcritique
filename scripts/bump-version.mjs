@@ -9,6 +9,15 @@ const next = `${a}.${b}.${c + 1}`
 pkg.version = next
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 
+// package-lock.json : la version du paquet racine apparaît deux fois en tête de fichier
+const lockPath = new URL('../package-lock.json', import.meta.url)
+try {
+  const lock = JSON.parse(readFileSync(lockPath, 'utf8'))
+  lock.version = next
+  if (lock.packages && lock.packages['']) lock.packages[''].version = next
+  writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n')
+} catch { /* pas de package-lock */ }
+
 const toml = new URL('../src-tauri/Cargo.toml', import.meta.url)
 writeFileSync(toml, readFileSync(toml, 'utf8').replace(/^version = ".*"$/m, `version = "${next}"`))
 try {
