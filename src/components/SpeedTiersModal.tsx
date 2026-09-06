@@ -69,7 +69,7 @@ interface Props {
   onUpdate: (side: SideKey, index: number, patch: Partial<PokemonState>) => void
 }
 
-const STAGES = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]
+const STAGES = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
 
 /** Réglages rapides : SP de Vitesse (0 à 32) et stade de Vitesse (−6 à +6) d'un Pokémon */
 function SpeedControls({ p, onChange, lang }: { p: PokemonState; onChange: (patch: Partial<PokemonState>) => void; lang: Lang }) {
