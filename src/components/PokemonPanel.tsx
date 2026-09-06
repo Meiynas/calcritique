@@ -533,7 +533,7 @@ function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role
             <TypeBadge type={info.type} lang={lang} small fixed />
             <Hover tip={<MoveTip move={move} lang={lang} />} className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}</Hover>
             {!learnable && <span className="text-[10px] text-accent" title={t.notLearnable}>⚠</span>}
-            <span className="text-[11px] tabular-nums text-muted">{info.category === 'Status' ? '·' : info.basePower}{extra?.acc !== null && extra?.acc !== undefined && extra.acc < 100 ? ` · ${extra.acc}%` : ''}</span>
+            <span className="text-[11px] tabular-nums text-muted">{info.category === 'Status' ? '·' : info.basePower || t.varPower}{extra?.acc !== null && extra?.acc !== undefined && extra.acc < 100 ? ` · ${extra.acc}%` : ''}</span>
             {pct !== undefined && <span className="w-11 text-right text-[10px] tabular-nums text-emerald-300">{pct}%</span>}
           </>
         ) : (

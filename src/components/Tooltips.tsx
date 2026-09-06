@@ -58,7 +58,7 @@ export function MoveTip({ move, lang }: { move: string; lang: Lang }) {
       </span>
       <span className="flex flex-wrap gap-x-3 text-muted">
         <span>{cat}</span>
-        <span>{t.power} : <b className="text-text">{info.basePower > 0 ? info.basePower : '·'}</b></span>
+        <span>{t.power} : <b className="text-text">{info.basePower > 0 ? info.basePower : info.category === 'Status' ? '·' : t.varPower}</b></span>
         <span>{t.accuracy} : <b className="text-text">{extra?.acc === null ? '∞' : `${extra?.acc ?? 100} %`}</b></span>
         {extra?.prio ? <span>{t.priority} : <b className="text-text">{extra.prio > 0 ? '+' : ''}{extra.prio}</b></span> : null}
       </span>

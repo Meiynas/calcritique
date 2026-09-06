@@ -111,6 +111,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export function MoveRow({ move, pct, lang, onPick, learnable, compact }: { move: string; pct?: number; lang: Lang; onPick: (m: string) => void; learnable: boolean; compact?: boolean }) {
+  const t = dict(lang)
   const info = moveInfo(move)!
   const extra = EXTRA.moves[move]
   const cat = info.category === 'Physical' ? 'Phys' : info.category === 'Special' ? 'Spé' : 'Stat'
@@ -123,7 +124,7 @@ export function MoveRow({ move, pct, lang, onPick, learnable, compact }: { move:
       <TypeBadge type={info.type} lang={lang} small fixed />
       <Hover tip={<MoveTip move={move} lang={lang} />} className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}{lang === 'fr' && label('moves', move, 'en') !== label('moves', move, 'fr') && <span className="ml-1 text-xs text-muted">{label('moves', move, 'en')}</span>}</Hover>
       <span className="w-9 text-right text-xs text-muted">{cat}</span>
-      <span className="w-8 text-right text-xs tabular-nums">{info.basePower > 0 ? info.basePower : '·'}</span>
+      <span className="w-8 text-right text-xs tabular-nums">{info.basePower > 0 ? info.basePower : info.category === 'Status' ? '·' : t.varPower}</span>
       <span className="w-10 text-right text-xs tabular-nums text-muted">{extra?.acc === null ? '∞' : `${extra?.acc ?? 100}%`}</span>
       <span className="w-12 text-right text-xs tabular-nums text-emerald-300">{pct !== undefined ? `${pct}%` : ''}</span>
     </button>

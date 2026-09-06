@@ -331,7 +331,7 @@ export function computeMove(
   if (blockedByProtect) {
     return {
       move: moveName, blockedByProtect, protectBypass,
-      category: (info.category ?? 'Status') as MoveResult['category'], type: normal.move.type, basePower: normal.move.bp,
+      category: (info.category ?? 'Status') as MoveResult['category'], type: normal.move.type, basePower: normal.rawDesc.moveBP ?? normal.move.bp,
       spread: false, min: 0, max: 0, minPct: 0, maxPct: 0, maxHP, curHP, accuracy: acc, critChance,
       koRollsOnly: koRollsOnly.map(() => 0), koTrue: koTrue.map(() => 0), desc: '', rolls: [], critMin: 0, critMax: 0, effectiveness,
     }
@@ -343,7 +343,7 @@ export function computeMove(
     protectBypass,
     category: (info.category ?? 'Status') as MoveResult['category'],
     type: normal.move.type,
-    basePower: normal.move.bp,
+    basePower: normal.rawDesc.moveBP ?? normal.move.bp, // puissance réelle (Balayage, Noeud Herbe, Tacle Lourd... dépendent de la cible)
     spread: gameType === 'Doubles' && isSpreadMove && !singleTarget,
     min: dmin,
     max: dmax,
