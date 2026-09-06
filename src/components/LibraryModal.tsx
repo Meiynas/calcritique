@@ -18,11 +18,12 @@ interface Props {
   onLoadTeam: (side: SideKey, team: PokemonState[]) => void
   lang: Lang
   onClose: () => void
+  initialTab?: 'sets' | 'teams'
 }
 
-export default function LibraryModal({ library, onChange, teams, onLoadSet, onLoadTeam, lang, onClose }: Props) {
+export default function LibraryModal({ library, onChange, teams, onLoadSet, onLoadTeam, lang, onClose, initialTab }: Props) {
   const t = dict(lang)
-  const [tab, setTab] = useState<'sets' | 'teams'>('sets')
+  const [tab, setTab] = useState<'sets' | 'teams'>(initialTab ?? 'sets')
   const [q, setQ] = useState('')
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
   const [message, setMessage] = useState('')
@@ -95,7 +96,7 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = '' }} />
         </span>
       </div>
-      <p className="px-4 pt-2 text-[11px] text-muted">{t.libHint}</p>
+      <p className="px-4 pt-2 text-[11px] text-muted">{tab === 'teams' ? t.libTeamsHint : t.libHint}</p>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {tab === 'sets' && (
           sets.length === 0 ? <p className="text-sm text-muted">{t.libEmptySets}</p> : (

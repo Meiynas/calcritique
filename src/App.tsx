@@ -39,7 +39,14 @@ export default function App() {
 
   // Bibliothèque de sets et d'équipes (stockage local + export / import)
   const [library, setLibrary] = useState<Library>(() => loadLibrary())
-  const [showLibrary, setShowLibrary] = useState(false)
+  const [showLibrary, setShowLibrary] = useState<'sets' | 'teams' | null>(null)
+  const saveTeam = (side: SideKey) => {
+    const team = state.teams[side].map(cleanSet)
+    if (!team.some((p) => p.species)) return
+    const name = `${side === 'left' ? t.team1 : t.team2} · ${new Date().toLocaleString()}`
+    updateLibrary({ ...library, teams: [{ id: newId(), name, team, createdAt: Date.now() }, ...library.teams] })
+    setShowLibrary('teams')
+  }
   const [showSpeed, setShowSpeed] = useState<SideKey | null>(null)
   const updateLibrary = (lib: Library) => { setLibrary(lib); saveLibrary(lib) }
   const saveSet = (p: PokemonState, name: string) => updateLibrary({ ...library, sets: [{ id: newId(), name, pokemon: cleanSet(p), createdAt: Date.now() }, ...library.sets] })
@@ -100,6 +107,8 @@ export default function App() {
         onSaveSet={saveSet}
         savedSets={library.sets}
         onSpeedTiers={() => setShowSpeed(side)}
+        onSaveTeam={() => saveTeam(side)}
+        onOpenTeams={() => setShowLibrary('teams')}
         foeTeam={state.teams[foe]}
         onChangeFoeTeam={(team) => setState((s) => ({ ...s, teams: { ...s.teams, [foe]: team } }))}
         onSetActive={(pos, i) =>
@@ -149,7 +158,7 @@ export default function App() {
           <div className="flex items-center gap-3 text-xs text-muted">
             <UpdateBadge status={update} lang={state.lang} />
             <button type="button" onClick={() => setShowSpeed('left')} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
-            <button type="button" onClick={() => setShowLibrary(true)} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
+            <button type="button" onClick={() => setShowLibrary('sets')} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
             <button type="button" onClick={reset} className="rounded border border-border px-2 py-1 hover:text-text">{t.reset}</button>
             <div className="flex overflow-hidden rounded border border-border">
               {(['fr', 'en'] as const).map((l) => (
@@ -226,11 +235,12 @@ export default function App() {
       {showSpeed && <SpeedTiersModal state={state} lang={state.lang} initialSide={showSpeed} onClose={() => setShowSpeed(null)} />}
       {showLibrary && (
         <LibraryModal
+          initialTab={showLibrary}
           library={library}
           onChange={updateLibrary}
           teams={state.teams}
           lang={state.lang}
-          onClose={() => setShowLibrary(false)}
+          onClose={() => setShowLibrary(null)}
           onLoadSet={(side, p) => setState((s) => { const team = [...s.teams[side]]; team[s.selected[side]] = { ...p, activeMove: 0 }; return { ...s, teams: { ...s.teams, [side]: team } } })}
           onLoadTeam={(side, team) => setState((s) => ({ ...s, teams: { ...s.teams, [side]: team.map((p) => ({ ...p, activeMove: 0 })) } }))}
         />

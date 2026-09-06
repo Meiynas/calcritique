@@ -112,13 +112,19 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
     const out: Row[] = []
     const bySpecies = new Map<string, Row[]>()
     for (const r of all) bySpecies.set(r.species, [...(bySpecies.get(r.species) ?? []), r])
+    // Même règle pour les variantes plus lentes que moi : regroupées sur la plus rapide d'entre elles (la plus proche)
+    const mergeGroup = (group: Row[]) => {
+      if (group.length > 1) {
+        const top = group.reduce((a, b) => (b.speed > a.speed ? b : a))
+        out.push({ ...top, merged: group.length - 1 })
+      } else out.push(...group)
+    }
     for (const list of bySpecies.values()) {
       const unreachable = list.filter((r) => r.speed > mySpeed && spToBeat(r.speed) === null)
-      const rest = list.filter((r) => !unreachable.includes(r))
-      if (unreachable.length > 1) {
-        const top = unreachable.reduce((a, b) => (b.speed > a.speed ? b : a))
-        out.push({ ...top, merged: unreachable.length - 1 })
-      } else out.push(...unreachable)
+      const slower = list.filter((r) => r.speed < mySpeed)
+      const rest = list.filter((r) => !unreachable.includes(r) && !slower.includes(r))
+      mergeGroup(unreachable)
+      mergeGroup(slower)
       out.push(...rest)
     }
     // Doublons exacts (même Pokémon, même vitesse) : on garde une ligne
@@ -168,6 +174,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
               </label>
             ))}
           </div>
+          <p className="text-muted">{t.speedTiersListHint(config.species.length)}</p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted">{t.speedTiersAdd} :</span>
             <SearchSelect kind="species" value="" onChange={(v) => { if (v && !config.species.includes(v)) update({ ...config, species: [...config.species, v] }) }} lang={lang} placeholder={t.searchPokemon} keys={LEGAL_SPECIES} className="w-64" />

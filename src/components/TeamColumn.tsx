@@ -36,9 +36,11 @@ interface Props {
   onSaveSet?: (p: PokemonState, name: string) => void
   savedSets?: SavedSet[]
   onSpeedTiers?: () => void
+  onSaveTeam?: () => void
+  onOpenTeams?: () => void
 }
 
-export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam, onSaveSet, savedSets, onSpeedTiers }: Props) {
+export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam, onSaveSet, savedSets, onSpeedTiers, onSaveTeam, onOpenTeams }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
@@ -74,8 +76,12 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
 
   return (
     <div className={'flex flex-col gap-3 rounded-2xl p-2 transition-shadow ' + wallClass}>
-      {/* Pièges sur ce côté */}
-      <HazardStrip value={sideState} onChange={onChangeSide} lang={lang} />
+      {/* Pièges sur ce côté + bibliothèque d'équipes */}
+      <div className="flex items-center gap-1.5">
+        <HazardStrip value={sideState} onChange={onChangeSide} lang={lang} />
+        {onSaveTeam && <button type="button" onClick={onSaveTeam} title={t.libSaveTeamHint} className="shrink-0 rounded-lg border border-border bg-surface px-2 py-1.5 text-[11px] text-muted hover:border-accent hover:text-text">💾</button>}
+        {onOpenTeams && <button type="button" onClick={onOpenTeams} title={t.libLoadTeamHint} className="shrink-0 rounded-lg border border-border bg-surface px-2 py-1.5 text-[11px] text-muted hover:border-accent hover:text-text">📂</button>}
+      </div>
 
       {/* Bandeau "sur le terrain" : positions A / B */}
       <div className={'grid gap-1.5 px-1 ' + (maxActive === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
@@ -313,7 +319,7 @@ function HazardStrip({ value, onChange, lang }: { value: SideState; onChange: (s
   const set = <K extends keyof SideState>(k: K, v: SideState[K]) => onChange({ ...value, [k]: v })
   const any = value.stealthRock || value.spikes > 0 || value.toxicSpikes > 0 || value.stickyWeb
   return (
-    <div className={'flex items-center justify-between gap-1 rounded-lg border px-2 py-1.5 text-xs ' + (any ? 'border-stone-400/60 bg-stone-500/15' : 'border-border bg-surface/60')}>
+    <div className={'flex min-w-0 flex-1 items-center justify-between gap-1 rounded-lg border px-2 py-1.5 text-xs ' + (any ? 'border-stone-400/60 bg-stone-500/15' : 'border-border bg-surface/60')}>
       <span className="text-[10px] uppercase tracking-wide text-muted">{t.hazards}</span>
       <div className="flex gap-1">
         <HazardButton on={value.stealthRock} onClick={() => set('stealthRock', !value.stealthRock)} title={t.stealthRock}>🪨</HazardButton>

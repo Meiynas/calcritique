@@ -263,6 +263,11 @@ Ajouté en v1.9.1 (retours du 6 septembre 2026) :
 - Fiche du Pokémon : bouton 📂 (avec le nombre de sets enregistrés pour cette espèce) qui déroule "Mes sets pour X" et charge le set choisi ; bouton ⚡ Speed tiers dans l'en-tête du tableau des stats (ouvre la fenêtre sur le bon côté).
 - Speed tiers refaits (calcritique.speedtiers.v2) : pour chaque Pokémon de la liste, 0 SP, 32 SP, 32 SP nature + et son set le plus joué (nature, SP et objet réels, Mouchoir compris), variantes cochables ; case "Mouchoir Choix pour tous" (x1,5 sur tous les comparés) ; les variantes d'un même Pokémon toutes hors de portée sont fusionnées sur la plus rapide (badge +N) ; doublons de vitesse supprimés.
 
+Ajouté en v1.9.2 (retours du 6 septembre 2026) :
+- Panneau 📂 de la fiche : en plus de "Mes sets", un composeur "Sets populaires" d'après les statistiques d'usage : top 10 objets, top 10 répartitions de SP, natures, talents et top 12 attaques avec leur %, un clic remplace cette partie du set (attaques : 4 max, re-clic pour retirer). Vérifié le 6 septembre 2026 : l'API championsbattledata ne publie PAS de sets complets ni d'équipes (seulement des classements par catégorie : attaques, objets, talents, natures, spreads, partenaires). Un "top 10 des vrais sets" ou un "top 1000 des équipes" demanderait une autre source (sites communautaires avec codes d'équipe : OP.GG, Pikalytics...), à étudier.
+- Équipes : boutons 💾 (enregistrer les 6 Pokémon de la colonne) et 📂 (ouvrir la bibliothèque sur l'onglet Équipes) en haut de chaque colonne, à côté des pièges. Texte d'aide dans l'onglet Équipes.
+- Speed tiers : les variantes d'un même Pokémon plus lentes que moi sont aussi regroupées (sur la plus rapide d'entre elles, badge +N), comme celles hors de portée. Texte d'explication dans "Gérer la liste" (Pokémon comparés).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -278,6 +283,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.9.2 : composeur de sets populaires (usage), boutons équipe 💾 / 📂 dans les colonnes, fusion des variantes plus lentes dans les speed tiers. Constat : pas de sets complets ni d'équipes dans l'API d'usage.
 - 2026-09-06 : v1.9.1 : nuage pour Brumeux, "Mes sets" dans la fiche, bouton Speed tiers dans les stats, speed tiers avec set le plus joué, Mouchoir pour tous et fusion des variantes hors de portée.
 - 2026-09-06 : v1.9.0 : conditions de combat en bandeau compact en haut, Téra ON / OFF, bibliothèque de sets et d'équipes (export / import JSON), speed tiers personnalisés, vue "Scénario probable" du déroulé.
 - 2026-09-06 : v1.8.1 : infobulles en portal (opaques, au-dessus de tout), icônes recadrées et centrées, étiquette SWITCH.

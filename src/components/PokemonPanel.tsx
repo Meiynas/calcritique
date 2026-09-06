@@ -6,7 +6,7 @@ import { dict } from '../i18n'
 import { label, NAMES } from '../lib/names'
 import { EXTRA, TYPE_NAMES, finalStats, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
 import { SP_MAX_STAT, SP_MAX_TOTAL, spTotal } from '../lib/champions'
-import { canLearn, mostPlayedSet, usagePercent } from '../lib/usage'
+import { canLearn, mostPlayedSet, usageFor, usagePercent } from '../lib/usage'
 import { isProtecting } from '../lib/engine'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
@@ -140,15 +140,18 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         )}
       </div>
       {showSets && (
-        <div className="flex flex-col gap-1 rounded-md border border-border bg-surface-2 p-2 text-xs">
-          <span className="text-muted">{t.libMySetsFor(label('species', value.species, lang))}</span>
-          {mySets.length === 0 && <span className="text-muted">{t.libNoSetFor}</span>}
-          {mySets.map((s) => (
-            <button key={s.id} type="button" onClick={() => { onChange({ ...s.pokemon, activeMove: 0 }); setShowSets(false) }} className="flex items-center gap-2 rounded border border-border bg-surface px-2 py-1 text-left hover:border-accent">
-              <b>{s.name}</b>
-              <span className="text-muted">{s.pokemon.item ? label('items', s.pokemon.item, lang) : t.none} · {label('natures', s.pokemon.nature, lang)} · {s.pokemon.moves.filter(Boolean).map((m) => label('moves', m, lang)).join(', ')}</span>
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-2 text-xs">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-muted">{t.libMySetsFor(label('species', value.species, lang))}</span>
+            {mySets.length === 0 && <span className="text-muted">{t.libNoSetFor}</span>}
+            {mySets.map((s) => (
+              <button key={s.id} type="button" onClick={() => { onChange({ ...s.pokemon, activeMove: 0 }); setShowSets(false) }} className="flex items-center gap-2 rounded border border-border bg-surface px-2 py-1 text-left hover:border-accent">
+                <b>{s.name}</b>
+                <span className="text-muted">{s.pokemon.item ? label('items', s.pokemon.item, lang) : t.none} · {label('natures', s.pokemon.nature, lang)} · {s.pokemon.moves.filter(Boolean).map((m) => label('moves', m, lang)).join(', ')}</span>
+              </button>
+            ))}
+          </div>
+          <UsageComposer value={value} onChange={onChange} lang={lang} />
         </div>
       )}
       {saveName !== null && onSaveSet && (
@@ -405,6 +408,77 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
       {slot !== null && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(slot, m); setSlot(null) }} onClose={() => setSlot(null)} />
       )}
+    </div>
+  )
+}
+
+/** Composer un set à partir des statistiques d'usage : objets, natures + SP, talents et attaques les plus joués (top 10). */
+function UsageComposer({ value, onChange, lang }: { value: PokemonState; onChange: (p: PokemonState) => void; lang: Lang }) {
+  const t = dict(lang)
+  const u = usageFor(value.species)
+  if (!u) return <span className="text-muted">{t.usageNone}</span>
+  const spreadKey = (sp: number[]) => sp.slice(0, 6).join('/')
+  const curSpread = spreadKey(STAT_KEYS.map((k) => value.sp[k]))
+  const chip = (on: boolean) => 'rounded border px-1.5 py-0.5 text-left ' + (on ? 'border-accent bg-accent/20 text-text' : 'border-border bg-surface text-muted hover:text-text')
+  const toggleMove = (m: string) => {
+    const moves = [...value.moves] as PokemonState['moves']
+    const i = moves.indexOf(m)
+    if (i >= 0) moves[i] = ''
+    else {
+      const free = moves.indexOf('')
+      if (free >= 0) moves[free] = m
+      else moves[3] = m
+    }
+    onChange({ ...value, moves })
+  }
+  return (
+    <div className="flex flex-col gap-1.5 border-t border-border pt-2">
+      <span className="font-semibold text-muted">{t.usageCompose}</span>
+      <span className="text-[10px] text-muted">{t.usageComposeHint}</span>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] uppercase text-muted">{t.item}</span>
+          {u.items.slice(0, 10).map(([it, pct]) => (
+            <button key={it} type="button" onClick={() => onChange({ ...value, item: it })} className={chip(value.item === it)}>{label('items', it, lang)} <span className="text-emerald-300">{pct}%</span></button>
+          ))}
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] uppercase text-muted">{t.nature} + SP</span>
+          {u.spreads.slice(0, 10).map((sp, i) => {
+            const spObj = { hp: sp[0], atk: sp[1], def: sp[2], spa: sp[3], spd: sp[4], spe: sp[5] }
+            const on = spreadKey(sp) === curSpread
+            const nat = u.natures[0]?.[0] ?? value.nature
+            return (
+              <button key={i} type="button" onClick={() => onChange({ ...value, sp: spObj, nature: value.nature === 'Serious' ? nat : value.nature })} className={chip(on)}>
+                {STAT_KEYS.filter((k) => spObj[k] > 0).map((k) => `${spObj[k]} ${t.statShort[k]}`).join(' / ')} <span className="text-emerald-300">{sp[6]}%</span>
+              </button>
+            )
+          })}
+          <span className="mt-1 text-[10px] uppercase text-muted">{t.nature}</span>
+          <div className="flex flex-wrap gap-1">
+            {u.natures.slice(0, 6).map(([n, pct]) => (
+              <button key={n} type="button" onClick={() => onChange({ ...value, nature: n })} className={chip(value.nature === n)}>{label('natures', n, lang)} <span className="text-emerald-300">{pct}%</span></button>
+            ))}
+          </div>
+          <span className="mt-1 text-[10px] uppercase text-muted">{t.ability}</span>
+          <div className="flex flex-wrap gap-1">
+            {u.abilities.slice(0, 4).map(([a, pct]) => (
+              <button key={a} type="button" onClick={() => onChange({ ...value, ability: a })} className={chip(value.ability === a)}>{label('abilities', a, lang)} <span className="text-emerald-300">{pct}%</span></button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <span className="text-[10px] uppercase text-muted">{t.moves} ({value.moves.filter(Boolean).length}/4)</span>
+      <div className="flex flex-wrap gap-1">
+        {u.moves.slice(0, 12).map(([m, pct]) => {
+          const info = moveInfo(m)
+          return (
+            <button key={m} type="button" onClick={() => toggleMove(m)} className={chip(value.moves.includes(m)) + ' flex items-center gap-1'}>
+              {info && <TypeBadge type={info.type} lang={lang} small />}{label('moves', m, lang)} <span className="text-emerald-300">{pct}%</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
