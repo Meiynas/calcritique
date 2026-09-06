@@ -195,6 +195,13 @@ Ajouté en v1.3.0 (demande du 6 septembre 2026 : plus d'équipe "attaquante" / "
 - En dessous, "Détail par attaque" : la carte complète (précision, vrai taux de KO, rolls) pour chaque Pokémon en jeu contre chacune de ses cibles.
 - Le composant SpeedBar et la notion attackerSide ont été retirés ; sauvegarde locale en version 4.
 
+Ajouté en v1.4.0 (retours du 6 septembre 2026, VGC) :
+- Nature par boutons + / − dans le tableau des stats (colonne "Nat.") : un + sur une stat et un − sur une autre choisissent la nature correspondante, même stat des deux côtés = nature neutre (Sérieux).
+- Pokémon en jeu : bandeau "En jeu" en haut de chaque colonne avec les positions A et B, et boutons A / B sur chaque carte (un seul bouton ● en 1v1). Cliquer une carte ne fait plus que sélectionner pour l'édition.
+- Cible : puces sous la liste d'attaques du Pokémon (A Carchacrok, B Farfaduvet, Allié) ; les attaques à cibles multiples affichent "toutes les cibles". La cible est rappelée dans l'ordre du tour.
+- Attaques à cibles multiples : le x0,75 ne s'applique que s'il y a vraiment plusieurs cibles (une seule cible vivante = pas de réduction). En 1v1 le moteur passe en Singles (Protection / Mur Lumière / Voile Aurore divisent par 2) ; en 2v2 les murs réduisent d'un tiers (2/3) comme en VGC.
+- Déroulé du tour, mécaniques VGC (src/lib/turn.ts) : Abri / Détection et variantes, Garde Large (bloque les attaques à cibles multiples sur son côté), Anti-Air (bloque les attaques prioritaires), Coup d'Main (l'allié frappe x1,5, icône 🤝), Par Ici / Poudre Fureur (redirige les attaques mono-cible adverses, "↪ redirigée"), Ruse perce Abri, Vent Arrière posé en cours de tour, baisses de Vitesse garanties (Vent Glacé, Toile Élek, Piétisol, Tomberoche, Tir de Boue, Balayette, Glaciation, Bondissement, Tempête Nordique, Tambour Battant), Bluff / Première Impression signalées "premier tour seulement". Vitesse dynamique : l'ordre est recalculé après chaque action (badge violet "3e" quand la position réelle diffère de l'ordre de départ).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -210,6 +217,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.4.0 : nature par + / −, positions A / B, cibles en puces, x0,75 selon le nombre de cibles, murs Singles / Doubles, attaques de soutien VGC dans le déroulé avec vitesse dynamique.
 - 2026-09-06 : v1.3.0 : format 1v1 / 2v2, Pokémon en jeu par équipe, déroulé du tour avec trois scénarios, détail par attaque. Fin des rôles attaquant / défenseur.
 - 2026-09-06 : v1.2.2 : PV saisissables à la main sur les cartes, bouton Switch (pièges, poison, Toile Gluante, remise à zéro).
 - 2026-09-06 : v1.2.1 : tri des attaques par type / catégorie / puissance théorique, Abri via l'attaque, double-clic, Méga séparées, PV sur les cartes, priorité dans la vitesse, soleil adouci, dégradés fixes.

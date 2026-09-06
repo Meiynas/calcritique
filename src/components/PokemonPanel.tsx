@@ -23,7 +23,7 @@ interface Props {
   /** Espèces de la même équipe (pour les suggestions de coéquipiers) */
   teamSpecies?: string[]
   /** Cibles possibles en 2v2 (absent en 1v1) */
-  targetOptions?: { value: number | 'ally'; label: string }[]
+  targetOptions?: { value: number | 'ally'; label: string; pos: string }[]
   lang: Lang
 }
 
@@ -47,6 +47,18 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
   function setSp(stat: StatKey, v: number) {
     const n = Math.max(0, Math.min(SP_MAX_STAT, Math.round(Number.isFinite(v) ? v : 0)))
     onChange({ ...value, sp: { ...value.sp, [stat]: n } })
+  }
+  /** Choisit la nature à partir d'un + et d'un − sur les stats (même stat des deux côtés = nature neutre). */
+  function setNature(stat: StatKey, which: 'plus' | 'minus') {
+    const cur = natureInfo(value.nature)
+    const neutral = !cur?.plus || cur.plus === cur.minus
+    let plus = neutral ? undefined : cur!.plus
+    let minus = neutral ? undefined : cur!.minus
+    if (which === 'plus') { plus = stat; if (!minus || minus === stat) minus = stat === 'spa' ? 'atk' : 'spa' }
+    else { minus = stat; if (!plus || plus === stat) plus = stat === 'atk' ? 'spa' : 'atk' }
+    if (plus === minus) { set('nature', 'Serious'); return }
+    const found = NATURE_KEYS.find((n) => { const i = natureInfo(n); return i?.plus === plus && i?.minus === minus })
+    if (found) set('nature', found)
   }
   function setBoost(stat: StatKey, v: number) {
     onChange({ ...value, boosts: { ...value.boosts, [stat]: v } })
@@ -141,7 +153,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         {over && <div className="mb-1 rounded bg-accent/15 px-2 py-1 text-xs text-accent">{t.spOver}</div>}
         <table className="w-full text-sm">
           <thead className="text-[11px] uppercase text-muted">
-            <tr><th className="text-left font-medium"> </th><th className="font-medium">Base</th><th className="font-medium">{t.sp}</th><th className="font-medium">=</th><th className="font-medium">{t.boost}</th></tr>
+            <tr><th className="text-left font-medium"> </th><th className="font-medium">Base</th><th className="font-medium">{t.sp}</th><th className="font-medium" title={t.natureHint}>{t.natureShort}</th><th className="font-medium">=</th><th className="font-medium">{t.boost}</th></tr>
           </thead>
           <tbody>
             {STAT_KEYS.map((k) => {
@@ -159,6 +171,14 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
                       onChange={(e) => setSp(k, e.target.valueAsNumber)}
                       className="w-14 rounded border border-border bg-surface-2 px-1 py-0.5 text-center focus:border-accent focus:outline-none"
                     />
+                  </td>
+                  <td className="text-center">
+                    {k !== 'hp' && (
+                      <span className="inline-flex overflow-hidden rounded border border-border text-[11px]">
+                        <button type="button" title={t.natureHint} onClick={() => setNature(k, 'plus')} className={'px-1.5 ' + (plus ? 'bg-emerald-500 text-white' : 'text-muted hover:text-text')}>+</button>
+                        <button type="button" title={t.natureHint} onClick={() => setNature(k, 'minus')} className={'px-1.5 ' + (minus ? 'bg-accent text-white' : 'text-muted hover:text-text')}>−</button>
+                      </span>
+                    )}
                   </td>
                   <td className="text-center font-semibold tabular-nums">{stats[k]}</td>
                   <td className="text-center">
@@ -208,18 +228,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.moves}</span>
           {targetOptions ? (
-            <label className="flex items-center gap-1 text-[11px] text-muted">
-              {t.targetLabel}
-              <select
-                className="rounded border border-border bg-surface-2 px-1 py-0.5 text-xs text-text"
-                value={value.target === null ? 'auto' : String(value.target)}
-                onChange={(e) => set('target', e.target.value === 'auto' ? null : e.target.value === 'ally' ? 'ally' : Number(e.target.value))}
-              >
-                <option value="auto">{t.targetAuto}</option>
-                {targetOptions.map((o) => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
-              </select>
-            </label>
-          ) : (
+            <span className="text-[10px] text-muted">{t.activeMoveHint}</span>          ) : (
             <span className="text-[10px] text-muted">{t.activeMoveHint}</span>
           )}
         </div>
@@ -238,6 +247,9 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
             />
           ))}
         </div>
+        {targetOptions && (
+          <TargetChips value={value} options={targetOptions} onChange={(tg) => set('target', tg)} lang={lang} />
+        )}
       </div>
 
       <Field label={t.status}>
@@ -298,6 +310,35 @@ function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role
           <button type="button" onClick={onEdit} title={t.change} className="rounded px-1 text-xs text-muted hover:bg-surface hover:text-text">✎</button>
           <button type="button" onClick={onClear} title={t.none} className="rounded px-1 text-xs text-muted hover:bg-surface hover:text-text">×</button>
         </>
+      )}
+    </div>
+  )
+}
+
+function TargetChips({ value, options, onChange, lang }: { value: PokemonState; options: { value: number | 'ally'; label: string; pos: string }[]; onChange: (tg: number | 'ally' | null) => void; lang: Lang }) {
+  const t = dict(lang)
+  const move = value.moves[value.activeMove ?? 0]
+  const info = move ? moveInfo(move) : undefined
+  const spread = info && (info.target === 'allAdjacentFoes' || info.target === 'allAdjacent' || info.target === 'self' || info.target === 'allySide' || info.target === 'all' || info.target === 'foeSide' || info.target === 'allyTeam')
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px]">
+      <span className="text-muted">{t.targetLabel} :</span>
+      {spread ? (
+        <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-muted">{info!.target === 'allAdjacentFoes' || info!.target === 'allAdjacent' ? t.allTargets : t.noTargetNeeded}</span>
+      ) : (
+        options.map((o) => {
+          const on = value.target === o.value || (value.target === null && o === options[0])
+          return (
+            <button
+              key={String(o.value)}
+              type="button"
+              onClick={() => onChange(o.value)}
+              className={'rounded border px-1.5 py-0.5 ' + (on ? 'border-accent bg-accent/20 text-text' : 'border-border bg-surface-2 text-muted hover:text-text')}
+            >
+              {o.pos && <b className="mr-1">{o.pos}</b>}{o.label}
+            </button>
+          )
+        })
       )}
     </div>
   )

@@ -67,11 +67,11 @@ function buildSide(s: SideState) {
 }
 
 /** Construit le terrain du moteur ; attackerSide dit quelle équipe attaque. */
-export function buildField(f: FieldState, attackerSide: SideKey = 'left'): Field {
+export function buildField(f: FieldState, attackerSide: SideKey = 'left', gameType: 'Singles' | 'Doubles' = 'Doubles'): Field {
   const atk = f[attackerSide]
   const def = f[attackerSide === 'left' ? 'right' : 'left']
   return new Field({
-    gameType: 'Doubles',
+    gameType,
     weather: (f.weather || undefined) as never,
     terrain: (f.terrain || undefined) as never,
     isGravity: f.gravity,
@@ -220,16 +220,24 @@ export function computeMove(
   fieldState: FieldState,
   options: CalcOptions,
   attackerSide: SideKey = 'left',
+  battle: { gameType?: 'Singles' | 'Doubles'; targetCount?: number } = {},
 ): MoveResult | null {
   if (!moveName || !gen.moves.get(toID(moveName)) || !attackerState.species || !defenderState.species) return null
   if (!gen.species.get(toID(attackerState.species)) || !gen.species.get(toID(defenderState.species))) return null
   const attacker = buildPokemon(attackerState)
   const defender = buildPokemon(defenderState)
-  const field = buildField(fieldState, attackerSide)
+  const gameType = battle.gameType ?? 'Doubles'
+  const field = buildField(fieldState, attackerSide, gameType)
   const info = gen.moves.get(toID(moveName))!
+  // Attaque à cibles multiples mais une seule cible réelle : pas de x0,75 (les murs restent à 2/3 en Doubles)
+  const isSpreadMove = info.target === 'allAdjacentFoes' || info.target === 'allAdjacent'
+  const singleTarget = gameType === 'Doubles' && isSpreadMove && (battle.targetCount ?? 2) <= 1
 
   const run = (isCrit: boolean) => {
-    const move = new Move(gen, moveName, { ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit })
+    const move = new Move(gen, moveName, {
+      ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit,
+      ...(singleTarget ? { overrides: { target: 'normal' as const } } : {}),
+    })
     return calculate(gen, attacker.clone(), defender.clone(), move, field.clone())
   }
 
@@ -298,7 +306,7 @@ export function computeMove(
     category: (info.category ?? 'Status') as MoveResult['category'],
     type: normal.move.type,
     basePower: normal.move.bp,
-    spread: normal.move.target === 'allAdjacentFoes' || normal.move.target === 'allAdjacent',
+    spread: gameType === 'Doubles' && isSpreadMove && !singleTarget,
     min: dmin,
     max: dmax,
     minPct: Math.floor((dmin / maxHP) * 1000) / 10,

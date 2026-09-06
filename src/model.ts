@@ -170,6 +170,17 @@ export function putActive(active: number[], index: number, max: number): number[
   return next
 }
 
+/** Place un Pokémon à la position A (0) ou B (1) du terrain ; échange s'il occupait l'autre position. */
+export function setActiveSlot(active: number[], pos: number, index: number, max: number): number[] {
+  const next = active.slice(0, max)
+  const other = next.indexOf(index)
+  if (other === pos) return next
+  const prev = next[pos]
+  next[pos] = index
+  if (other >= 0) next[other] = prev
+  return next.filter((n) => n !== undefined)
+}
+
 const STORAGE_KEY = 'calcritique.state.v4'
 
 function fixTeam(team: unknown): PokemonState[] {

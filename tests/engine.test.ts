@@ -108,3 +108,44 @@ test('switch : pièges sur Dracaufeu (Vol), Carchacrok (Sol) et Prédastérie (P
   assert.equal(pex.side.toxicSpikes, 0)
   assert.equal(pex.pokemon.status, '')
 })
+
+test('cibles multiples : x0,75 seulement avec 2 cibles ; murs à 2/3 en Doubles, 1/2 en Singles', () => {
+  const atk = defaultPokemon('Garchomp', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 } })
+  const def = defaultPokemon('Kingambit')
+  const two = computeMove('Earthquake', atk, def, field, opts, 'left', { targetCount: 2 })!
+  const one = computeMove('Earthquake', atk, def, field, opts, 'left', { targetCount: 1 })!
+  assert.ok(two.spread && !one.spread)
+  assert.ok(one.max > two.max)
+  const reflected = { ...field, right: { ...field.right, reflect: true } }
+  const dbl = computeMove('Earthquake', atk, def, reflected, opts, 'left', { targetCount: 1 })!
+  const sgl = computeMove('Earthquake', atk, def, reflected, opts, 'left', { gameType: 'Singles', targetCount: 1 })!
+  assert.ok(sgl.max < dbl.max) // Protection réduit de moitié en Singles, d'un tiers en Doubles
+})
+
+test('tour : Garde Large bloque Séisme, Coup d\'Main renforce l\'allié, Vent Glacé fait repasser après', async () => {
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { defaultState } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '2v2'
+  st.teams.left[0] = defaultPokemon('Garchomp', { nature: 'Jolly', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ['Earthquake', '', '', ''] })
+  st.teams.left[1] = defaultPokemon('Whimsicott', { nature: 'Timid', sp: { hp: 0, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 }, ability: 'Prankster', moves: ['Helping Hand', '', '', ''] })
+  st.teams.right[0] = defaultPokemon('Hisuian Avalugg'.replace('Hisuian Avalugg', 'Avalugg-Hisui'), { moves: ['Wide Guard', '', '', ''] })
+  st.teams.right[1] = defaultPokemon('Kingambit', { moves: ['Kowtow Cleave', '', '', ''] })
+  st.active = { left: [0, 1], right: [0, 1] }
+  const r = simulateTurn(st)
+  const avg = r.scenarios.average
+  const chomp = avg.actions.find((a) => a.action.move === 'Earthquake')!
+  const foeHits = chomp.hits.filter((h) => h.target.side === 'right')
+  assert.equal(foeHits.length, 2)
+  assert.ok(foeHits.every((h) => h.blocked && h.blockedBy === 'wideGuard'))
+  assert.ok(chomp.hits.every((h) => h.helpingHand))
+  // Sans Garde Large : Coup d'Main augmente les dégâts
+  st.teams.right[0].moves[0] = 'Protect'
+  st.teams.right[0].activeMove = 0
+  const r2 = simulateTurn(st)
+  const eq = r2.scenarios.average.actions.find((a) => a.action.move === 'Earthquake')!
+  const onKing = eq.hits.find((h) => h.target.index === 1)!
+  assert.ok(onKing.helpingHand && onKing.damage > 0)
+  const onAvalugg = eq.hits.find((h) => h.target.index === 0)!
+  assert.ok(onAvalugg.blocked && onAvalugg.blockedBy === 'protect')
+})

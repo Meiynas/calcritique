@@ -41,6 +41,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                 <span className={'font-semibold ' + sideColor(a.actor)}>{name(a.actor)}</span>
                 {info && <TypeBadge type={info.type} lang={lang} small />}
                 <span>{a.move ? label('moves', a.move, lang) : '·'}</span>
+                {a.targets.length > 0 && !a.isStatus && <span className="text-muted">→ {a.spread ? t.allTargets : name(a.targets[0])}</span>}
                 {a.priority !== 0 && <span className="text-violet-300">{a.priority > 0 ? '+' + a.priority : a.priority}</span>}
                 <span className="tabular-nums text-muted">{a.speed}</span>
               </span>
@@ -67,11 +68,13 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                   <div className="text-muted">{a.move ? label('moves', a.move, lang) : '·'}{a.spread ? ` · ${t.spreadShort}` : ''}</div>
                 </td>
                 {KINDS.map((k) => {
-                  const sa = turn.scenarios[k].actions[i]
+                  const sa = turn.scenarios[k].actions.find((x) => slotKey(x.action.actor) === slotKey(a.actor))!
                   return (
                     <td key={k} className="py-1.5 px-1.5">
+                      {sa.position !== i + 1 && <span className="mr-1 rounded bg-violet-500/30 px-1 text-[10px] text-violet-200" title={t.reordered}>{sa.position}{lang === 'fr' ? 'e' : 'th'}</span>}
                       {sa.skipped === 'fainted' && <span className="text-muted italic">{t.skippedFainted}</span>}
-                      {!sa.skipped && a.isStatus && <span className="text-muted italic">{t.statusMove}</span>}
+                      {!sa.skipped && sa.effect && <span className="text-emerald-300 italic">{t.effects[sa.effect]}</span>}
+                      {!sa.skipped && !sa.effect && a.isStatus && <span className="text-muted italic">{t.statusMove}</span>}
                       {!sa.skipped && !a.isStatus && sa.hits.length === 0 && <span className="text-muted italic">{t.noTarget}</span>}
                       {sa.hits.map((h) => <HitLine key={slotKey(h.target)} hit={h} name={name(h.target)} lang={lang} />)}
                     </td>
@@ -97,12 +100,14 @@ function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
   return (
     <div className="flex flex-wrap items-center gap-x-1.5 leading-5">
       <span className="text-muted">→ {name}</span>
-      {hit.blocked && <span className="text-emerald-300">🛡 {t.blockedByProtect}</span>}
+      {hit.redirected && <span className="text-violet-300">↪ {t.redirected}</span>}
+      {hit.blocked && <span className="text-emerald-300">🛡 {hit.blockedBy === 'wideGuard' ? t.effects.wideGuard : hit.blockedBy === 'quickGuard' ? t.effects.quickGuard : t.blockedByProtect}</span>}
       {!hit.blocked && hit.missed && <span className="text-orange-300">{t.missed}</span>}
       {!hit.blocked && !hit.missed && (
         <>
           <span className={'font-semibold tabular-nums ' + (hit.ko ? 'text-accent' : '')}>−{pct}%</span>
           {hit.crit && <span className="text-amber-300">{t.critShort}</span>}
+          {hit.helpingHand && <span className="text-amber-200">🤝</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>
           {hit.ko && <span className="font-bold text-accent">KO</span>}
         </>

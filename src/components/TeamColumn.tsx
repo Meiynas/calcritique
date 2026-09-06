@@ -22,15 +22,16 @@ interface Props {
   active: number[]
   maxActive: number
   onSelect: (i: number) => void
+  onSetActive: (pos: number, i: number) => void
   onChangeTeam: (team: PokemonState[]) => void
   sideState: SideState
   onChangeSide: (s: SideState) => void
   field: FieldState
   lang: Lang
-  targetOptions?: { value: number | 'ally'; label: string }[]
+  targetOptions?: { value: number | 'ally'; label: string; pos: string }[]
 }
 
-export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions }: Props) {
+export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
@@ -61,7 +62,26 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
 
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-bold uppercase tracking-wide">{side === 'left' ? t.team1 : t.team2}</h2>
-        <span className={'text-xs font-semibold uppercase ' + roleColor}>{t.onField} : {active.filter((i) => team[i]?.species).length} / {maxActive}</span>
+        <span className={'text-xs font-semibold uppercase ' + roleColor}>{t.onField}</span>
+      </div>
+
+      {/* Bandeau "sur le terrain" : positions A / B */}
+      <div className={'grid gap-1.5 px-1 ' + (maxActive === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+        {Array.from({ length: maxActive }, (_, pos) => {
+          const idx = active[pos]
+          const mon = idx !== undefined ? team[idx] : undefined
+          const filled = !!mon?.species
+          return (
+            <div key={pos} className={'flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ' + (filled ? (side === 'left' ? 'border-accent/60 bg-accent/10' : 'border-sky-400/60 bg-sky-400/10') : 'border-dashed border-border text-muted')}>
+              <span className={'rounded px-1 text-[10px] font-bold text-white ' + (side === 'left' ? 'bg-accent' : 'bg-sky-500')}>{maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●'}</span>
+              {filled ? (
+                <button type="button" onClick={() => onSelect(idx)} className="min-w-0 flex-1 truncate text-left font-semibold hover:underline">{label('species', mon!.species, lang)}</button>
+              ) : (
+                <span className="flex-1 truncate">{t.emptyField}</span>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Effets du côté */}
@@ -83,6 +103,8 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
             active={i === selected}
             onField={active.includes(i)}
             fieldPos={active.indexOf(i)}
+            maxActive={maxActive}
+            onSetActive={(pos) => onSetActive(pos, i)}
             onClick={() => onSelect(i)}
             onDoubleClick={() => { onSelect(i); setPickSlot(i) }}
             onHP={(pct) => setMon(i, { ...p, curHPPercent: pct })}
@@ -117,8 +139,8 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
   )
 }
 
-function MonCard({ mon, active, onField, fieldPos, onClick, onDoubleClick, onHP, onSwitch, toast, lang, side }: {
-  mon: PokemonState; active: boolean; onField: boolean; fieldPos: number; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; onSwitch: () => void; toast: string[] | null; lang: Lang; side: SideKey
+function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onClick, onDoubleClick, onHP, onSwitch, toast, lang, side }: {
+  mon: PokemonState; active: boolean; onField: boolean; fieldPos: number; maxActive: number; onSetActive: (pos: number) => void; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; onSwitch: () => void; toast: string[] | null; lang: Lang; side: SideKey
 }) {
   const t = dict(lang)
   const [editing, setEditing] = useState<null | 'hp' | 'pct'>(null)
@@ -148,7 +170,23 @@ function MonCard({ mon, active, onField, fieldPos, onClick, onDoubleClick, onHP,
     >
       <div className="flex items-center justify-between gap-1">
         <span className="flex min-w-0 items-center gap-1">
-          {onField && <span className={'shrink-0 rounded px-1 text-[9px] font-bold uppercase text-white ' + (side === 'left' ? 'bg-accent' : 'bg-sky-500')} title={t.onField}>{fieldPos === 0 ? 'A' : 'B'}</span>}
+          <span className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+            {Array.from({ length: maxActive }, (_, pos) => {
+              const here = onField && fieldPos === pos
+              const on = side === 'left' ? 'bg-accent text-white border-accent' : 'bg-sky-500 text-white border-sky-500'
+              return (
+                <button
+                  key={pos}
+                  type="button"
+                  title={t.putOnField + (maxActive === 2 ? ` (${pos === 0 ? 'A' : 'B'})` : '')}
+                  onClick={() => onSetActive(pos)}
+                  className={'rounded border px-1 text-[9px] font-bold uppercase ' + (here ? on : 'border-border bg-surface-2 text-muted hover:text-text')}
+                >
+                  {maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●'}
+                </button>
+              )
+            })}
+          </span>
           <span className="truncate text-sm font-semibold">{label('species', mon.species, lang)}</span>
         </span>
         <span className="flex items-center gap-0.5">

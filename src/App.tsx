@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { APP_VERSION, checkForUpdate, isDesktop, type UpdateStatus } from './updater'
-import { activeCount, defaultState, loadState, otherSide, putActive, saveState, type AppState, type BattleMode, type SideKey } from './model'
+import { activeCount, defaultState, loadState, otherSide, saveState, setActiveSlot, type AppState, type BattleMode, type SideKey } from './model'
 import { dict } from './i18n'
 import { computeMove } from './lib/engine'
 import { mostPlayedSet } from './lib/usage'
@@ -38,7 +38,7 @@ export default function App() {
       turn.order.flatMap((a) =>
         a.targets.map((tg) => {
           const defender = state.teams[tg.side][tg.index]
-          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side) }
+          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length }) }
         }),
       ),
     [turn, state],
@@ -66,11 +66,12 @@ export default function App() {
         selected={state.selected[side]}
         active={state.active[side]}
         maxActive={activeCount(state.mode)}
-        onSelect={(i) =>
+        onSelect={(i) => setState((s) => ({ ...s, selected: { ...s.selected, [side]: i } }))}
+        onSetActive={(pos, i) =>
           setState((s) => ({
             ...s,
             selected: { ...s.selected, [side]: i },
-            active: { ...s.active, [side]: s.teams[side][i]?.species ? putActive(s.active[side], i, activeCount(s.mode)) : s.active[side] },
+            active: { ...s.active, [side]: setActiveSlot(s.active[side], pos, i, activeCount(s.mode)) },
           }))
         }
         onChangeTeam={(team) => setState((s) => ({ ...s, teams: { ...s.teams, [side]: team } }))}
@@ -81,8 +82,8 @@ export default function App() {
         targetOptions={
           state.mode === '2v2'
             ? [
-                ...foeActives.map((i) => ({ value: i as number | 'ally', label: label('species', state.teams[foe][i].species, state.lang) })),
-                ...(allyActives.length > 1 ? [{ value: 'ally' as const, label: t.targetAlly }] : []),
+                ...foeActives.map((i, pos) => ({ value: i as number | 'ally', label: label('species', state.teams[foe][i].species, state.lang), pos: pos === 0 ? 'A' : 'B' })),
+                ...(allyActives.length > 1 ? [{ value: 'ally' as const, label: t.targetAlly, pos: '' }] : []),
               ]
             : undefined
         }

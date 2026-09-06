@@ -1,12 +1,24 @@
 // Déroulé d'un tour : les Pokémon sur le terrain agissent dans l'ordre (priorité, puis Vitesse,
 // Distorsion, Vent Arrière), chacun avec son attaque mise en avant et sa cible.
+// Mécaniques VGC gérées : Abri / Détection et variantes, Garde Large, Anti-Air, Coup d'Main,
+// Par Ici / Poudre Fureur (redirection), Ruse (perce Abri), Vent Arrière posé en cours de tour,
+// baisses de Vitesse (Vent Glacé, Toile Élek...) avec ordre recalculé après chaque action (vitesse dynamique).
 // Trois scénarios du point de vue de l'équipe 1 (gauche) : meilleur, moyen, pire.
 import type { AppState, FieldState, PokemonState, SideKey } from '../model'
 import { otherSide } from '../model'
-import { buildPokemon, computeMove, effectiveSpeed, isProtecting, moveInfo, movePriority, type MoveResult } from './engine'
+import { buildPokemon, computeMove, effectiveSpeed, moveInfo, movePriority, PROTECT_MOVES, type MoveResult } from './engine'
 
 export interface Slot { side: SideKey; index: number }
 export const slotKey = (s: Slot) => `${s.side}:${s.index}`
+
+export const WIDE_GUARD = ['Wide Guard']
+export const QUICK_GUARD = ['Quick Guard']
+export const HELPING_HAND = ['Helping Hand']
+export const REDIRECT_MOVES = ['Follow Me', 'Rage Powder']
+export const TAILWIND = ['Tailwind']
+/** Attaques qui baissent la Vitesse de la cible à coup sûr (−1) */
+export const SPEED_DROP_MOVES = ['Icy Wind', 'Electroweb', 'Bulldoze', 'Rock Tomb', 'Mud Shot', 'Low Sweep', 'Glaciate', 'Pounce', 'Bleakwind Storm', 'Drum Beating']
+export const FIRST_TURN_ONLY = ['Fake Out', 'First Impression']
 
 export interface Action {
   actor: Slot
@@ -33,20 +45,25 @@ export interface Hit {
   missed: boolean
   crit: boolean
   blocked: boolean
-  /** Résultat complet (précision, vrai taux de KO) contre la cible avec ses PV du moment */
+  blockedBy?: 'protect' | 'wideGuard' | 'quickGuard'
+  redirected: boolean
+  helpingHand: boolean
   detail: MoveResult | null
 }
 
 export interface ScenarioAction {
   action: Action
+  /** Position réelle dans ce scénario (1 = premier) */
+  position: number
   skipped: 'fainted' | null
+  /** Effet spécial de l'action (clé de traduction) */
+  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly'
   hits: Hit[]
 }
 
 export interface Scenario {
   kind: ScenarioKind
   actions: ScenarioAction[]
-  /** PV finaux par emplacement */
   hp: Record<string, { hp: number; maxHP: number; fainted: boolean }>
 }
 
@@ -61,6 +78,10 @@ function activeSlots(state: AppState, side: SideKey): Slot[] {
     .map((index) => ({ side, index }))
 }
 
+function isSpreadTarget(t: string | undefined): boolean {
+  return t === 'allAdjacentFoes' || t === 'allAdjacent'
+}
+
 /** Cibles d'une action selon l'attaque et le réglage de cible du Pokémon. */
 export function targetsFor(state: AppState, actor: Slot, moveName: string): { targets: Slot[]; spread: boolean } {
   const info = moveInfo(moveName)
@@ -70,8 +91,9 @@ export function targetsFor(state: AppState, actor: Slot, moveName: string): { ta
   const t = info.target
   if (t === 'allAdjacentFoes') return { targets: foes, spread: foes.length > 1 }
   if (t === 'allAdjacent') return { targets: [...foes, ...allies], spread: foes.length + allies.length > 1 }
-  if (t === 'self' || t === 'allySide' || t === 'allyTeam' || t === 'all' || t === 'foeSide') return { targets: [], spread: false }
+  if (t === 'self' || t === 'allySide' || t === 'allyTeam' || t === 'all' || t === 'foeSide' || t === 'allies') return { targets: [], spread: false }
   const p = state.teams[actor.side][actor.index]
+  if (t === 'adjacentAlly' || t === 'adjacentAllyOrSelf') return { targets: allies.slice(0, 1), spread: false }
   if (p.target === 'ally') return { targets: allies.slice(0, 1), spread: false }
   if (typeof p.target === 'number') {
     const found = foes.find((f) => f.index === p.target)
@@ -80,12 +102,7 @@ export function targetsFor(state: AppState, actor: Slot, moveName: string): { ta
   return { targets: foes.slice(0, 1), spread: false }
 }
 
-function speedOf(state: AppState, slot: Slot): number {
-  const p = state.teams[slot.side][slot.index]
-  return effectiveSpeed(buildPokemon(p), p, state.field[slot.side], state.field)
-}
-
-export function turnOrder(state: AppState): Action[] {
+function baseActions(state: AppState): Action[] {
   const actions: Action[] = []
   for (const side of ['left', 'right'] as SideKey[]) {
     for (const slot of activeSlots(state, side)) {
@@ -96,28 +113,34 @@ export function turnOrder(state: AppState): Action[] {
       if (state.field.terrain === 'Grassy' && move === 'Grassy Glide') priority += 1
       const { targets, spread } = targetsFor(state, slot, move)
       actions.push({
-        actor: slot,
-        pokemon: p,
-        move,
-        targets,
-        spread,
+        actor: slot, pokemon: p, move, targets, spread,
         isStatus: !info || info.category === 'Status' || !info.category,
         priority,
-        speed: speedOf(state, slot),
+        speed: effectiveSpeed(buildPokemon(p), p, state.field[side], state.field),
         tieWithNext: false,
       })
     }
   }
-  const tr = state.field.trickRoom
-  actions.sort((a, b) => {
+  return actions
+}
+
+function sortActions(actions: Action[], trickRoom: boolean, speedOf: (a: Action) => number): Action[] {
+  const sorted = [...actions].sort((a, b) => {
     if (a.priority !== b.priority) return b.priority - a.priority
-    if (a.speed !== b.speed) return tr ? a.speed - b.speed : b.speed - a.speed
+    const sa = speedOf(a), sb = speedOf(b)
+    if (sa !== sb) return trickRoom ? sa - sb : sb - sa
     return a.actor.side === 'left' ? -1 : 1
   })
-  for (let i = 0; i < actions.length - 1; i++) {
-    actions[i].tieWithNext = actions[i].priority === actions[i + 1].priority && actions[i].speed === actions[i + 1].speed
+  for (let i = 0; i < sorted.length - 1; i++) {
+    sorted[i].tieWithNext = sorted[i].priority === sorted[i + 1].priority && speedOf(sorted[i]) === speedOf(sorted[i + 1])
   }
-  return actions
+  if (sorted.length) sorted[sorted.length - 1].tieWithNext = false
+  return sorted
+}
+
+/** Ordre "de départ" (avant toute action), pour l'affichage. */
+export function turnOrder(state: AppState): Action[] {
+  return sortActions(baseActions(state), state.field.trickRoom, (a) => a.speed)
 }
 
 /** Dégâts retenus pour une frappe selon le scénario et le camp de l'attaquant (équipe 1 = "nous"). */
@@ -127,16 +150,13 @@ function pickDamage(kind: ScenarioKind, ours: boolean, normal: MoveResult, crit:
   const median = rolls[Math.floor(rolls.length / 2)]
   const favorable = kind === 'best' ? ours : kind === 'worst' ? !ours : null
   if (favorable === true) {
-    // Le mieux pour ce camp : ça touche, roll max, critique si possible
     if (crit && normal.critChance > 0) return { damage: crit.max, missed: false, crit: true }
     return { damage: normal.max, missed: false, crit: false }
   }
   if (favorable === false) {
-    // Le pire pour ce camp : ça rate si ça peut rater, sinon roll min
     if (canMiss) return { damage: 0, missed: true, crit: false }
     return { damage: normal.min, missed: false, crit: false }
   }
-  // Moyen : roll médian, pas de critique, ça touche si précision >= 50 %
   if (canMiss && normal.accuracy.effective < 50) return { damage: 0, missed: true, crit: false }
   return { damage: median, missed: false, crit: false }
 }
@@ -145,12 +165,18 @@ export function simulateTurn(state: AppState): TurnResult {
   const order = turnOrder(state)
   const kinds: ScenarioKind[] = ['best', 'average', 'worst']
   const scenarios = {} as Record<ScenarioKind, Scenario>
-  const field: FieldState = state.field
+  const gameType = state.mode === '1v1' ? ('Singles' as const) : ('Doubles' as const)
 
   for (const kind of kinds) {
-    // PV courants par emplacement
+    // État courant du scénario : PV, Pokémon (boosts modifiés), effets de côté posés ce tour
     const hp: Scenario['hp'] = {}
     const mons: Record<string, PokemonState> = {}
+    const field: FieldState = { ...state.field, left: { ...state.field.left }, right: { ...state.field.right } }
+    const guard: Record<SideKey, { wide: boolean; quick: boolean; redirect: Slot | null }> = {
+      left: { wide: false, quick: false, redirect: null },
+      right: { wide: false, quick: false, redirect: null },
+    }
+    const helping: Record<string, boolean> = {} // clé d'emplacement -> Coup d'Main reçu ce tour
     for (const side of ['left', 'right'] as SideKey[]) {
       for (const slot of activeSlots(state, side)) {
         const p = state.teams[side][slot.index]
@@ -159,37 +185,89 @@ export function simulateTurn(state: AppState): TurnResult {
         mons[slotKey(slot)] = p
       }
     }
-    const actions: ScenarioAction[] = []
-    for (const action of order) {
+    const speedOf = (a: Action) => {
+      const p = mons[slotKey(a.actor)]
+      return effectiveSpeed(buildPokemon(p), p, field[a.actor.side], field)
+    }
+
+    let remaining = baseActions(state)
+    const done: ScenarioAction[] = []
+    let position = 0
+    while (remaining.length) {
+      remaining = sortActions(remaining, field.trickRoom, speedOf)
+      const action = remaining.shift()!
+      position++
       const ak = slotKey(action.actor)
-      if (hp[ak]?.fainted) { actions.push({ action, skipped: 'fainted', hits: [] }); continue }
+      if (hp[ak]?.fainted) { done.push({ action, position, skipped: 'fainted', hits: [] }); continue }
+      const side = action.actor.side
+      const foe = otherSide(side)
+      let effect: ScenarioAction['effect']
+
+      // Effets de soutien
+      if (PROTECT_MOVES.includes(action.move)) effect = 'protect'
+      if (WIDE_GUARD.includes(action.move)) { guard[side].wide = true; effect = 'wideGuard' }
+      if (QUICK_GUARD.includes(action.move)) { guard[side].quick = true; effect = 'quickGuard' }
+      if (REDIRECT_MOVES.includes(action.move)) { guard[side].redirect = action.actor; effect = 'redirect' }
+      if (TAILWIND.includes(action.move)) { field[side] = { ...field[side], tailwind: true }; effect = 'tailwind' }
+      if (HELPING_HAND.includes(action.move)) {
+        for (const ally of activeSlots(state, side)) if (ally.index !== action.actor.index) helping[slotKey(ally)] = true
+        effect = 'helpingHand'
+      }
+      if (FIRST_TURN_ONLY.includes(action.move)) effect = 'firstTurnOnly'
+
       const hits: Hit[] = []
       if (!action.isStatus) {
-        for (const target of action.targets) {
+        const info = moveInfo(action.move)
+        // Redirection : attaque mono-cible visant l'ennemi -> Par Ici / Poudre Fureur
+        let targets = action.targets
+        let redirected = false
+        const rd = guard[foe].redirect
+        if (rd && !isSpreadTarget(info?.target) && targets.length === 1 && targets[0].side === foe && !hp[slotKey(rd)].fainted && slotKey(targets[0]) !== slotKey(rd)) {
+          targets = [rd]
+          redirected = true
+        }
+        const alive = targets.filter((tg) => !hp[slotKey(tg)]?.fainted)
+        for (const target of alive) {
           const tk = slotKey(target)
           const cur = hp[tk]
-          if (!cur || cur.fainted) continue
-          // Défenseur avec ses PV du moment (pourcentage fractionnaire pour garder la précision)
           const defender: PokemonState = { ...mons[tk], curHPPercent: (cur.hp / cur.maxHP) * 100 }
           const attackerState = mons[ak]
-          const normal = computeMove(action.move, attackerState, defender, field, { ...state.options, critMode: 'chance' }, action.actor.side)
+          const hh = !!helping[ak]
+          const f: FieldState = hh ? { ...field, [side]: { ...field[side], helpingHand: true } } : field
+          const battle = { gameType, targetCount: alive.length }
+          const normal = computeMove(action.move, attackerState, defender, f, { ...state.options, critMode: 'chance' }, side, battle)
           if (!normal) continue
-          if (normal.blockedByProtect || isProtecting(defender) && normal.blockedByProtect) {
-            hits.push({ target, damage: 0, hpBefore: cur.hp, hpAfter: cur.hp, maxHP: cur.maxHP, ko: false, missed: false, crit: false, blocked: true, detail: normal })
+          const base = { target, hpBefore: cur.hp, maxHP: cur.maxHP, redirected, helpingHand: hh, detail: normal }
+          // Garde Large / Anti-Air du côté de la cible
+          if (target.side !== side && guard[target.side].wide && isSpreadTarget(info?.target)) {
+            hits.push({ ...base, damage: 0, hpAfter: cur.hp, ko: false, missed: false, crit: false, blocked: true, blockedBy: 'wideGuard' })
             continue
           }
-          const crit = normal.critChance > 0 ? computeMove(action.move, attackerState, defender, field, { ...state.options, critMode: 'always' }, action.actor.side) : null
-          const pick = pickDamage(kind, action.actor.side === 'left', normal, crit)
+          if (target.side !== side && guard[target.side].quick && action.priority > 0) {
+            hits.push({ ...base, damage: 0, hpAfter: cur.hp, ko: false, missed: false, crit: false, blocked: true, blockedBy: 'quickGuard' })
+            continue
+          }
+          if (normal.blockedByProtect) {
+            hits.push({ ...base, damage: 0, hpAfter: cur.hp, ko: false, missed: false, crit: false, blocked: true, blockedBy: 'protect' })
+            continue
+          }
+          const crit = normal.critChance > 0 ? computeMove(action.move, attackerState, defender, f, { ...state.options, critMode: 'always' }, side, battle) : null
+          const pick = pickDamage(kind, side === 'left', normal, crit)
           const dmg = Math.min(cur.hp, pick.damage)
           const after = cur.hp - dmg
           const ko = after <= 0
-          hits.push({ target, damage: dmg, hpBefore: cur.hp, hpAfter: Math.max(0, after), maxHP: cur.maxHP, ko, missed: pick.missed, crit: pick.crit, blocked: false, detail: normal })
+          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false })
           hp[tk] = { hp: Math.max(0, after), maxHP: cur.maxHP, fainted: ko }
+          // Baisse de Vitesse garantie : l'ordre sera recalculé pour les actions suivantes
+          if (!pick.missed && !ko && SPEED_DROP_MOVES.includes(action.move)) {
+            const tp = mons[tk]
+            mons[tk] = { ...tp, boosts: { ...tp.boosts, spe: Math.max(-6, (tp.boosts.spe ?? 0) - 1) } }
+          }
         }
       }
-      actions.push({ action, skipped: null, hits })
+      done.push({ action, position, skipped: null, effect, hits })
     }
-    scenarios[kind] = { kind, actions, hp }
+    scenarios[kind] = { kind, actions: done, hp }
   }
   return { order, scenarios }
 }
