@@ -38,7 +38,8 @@ export function saveSpeedTiers(c: SpeedTiersConfig): void {
   try { localStorage.setItem(KEY, JSON.stringify(c)) } catch { /* stockage indisponible */ }
 }
 
-interface Row { species: string; variant: VariantKey; speed: number; detail: string; merged: number }
+interface Row { species: string; variant: VariantKey; speed: number; detail: string; merged: number; scarfed?: boolean }
+const isMega = (species: string) => species.includes('-Mega')
 
 /** Vitesse d'une variante de référence au niveau 50 (sans Mouchoir) et son libellé de détail */
 function variantRow(species: string, v: VariantKey, lang: Lang): { speed: number; detail: string } | null {
@@ -98,12 +99,15 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
   const rows = useMemo(() => {
     const all: Row[] = []
     for (const sp of LEGAL_SPECIES) {
+      if (sp === me.species) continue // se comparer à soi-même n'apporte rien
       for (const v of ALL_VARIANTS) {
         if (!config.variants[v]) continue
         const r = variantRow(sp, v, lang)
         if (!r) continue
-        const speed = config.scarfAll && !(v === 'mostPlayed' && mostPlayedSet(sp).item === 'Choice Scarf') ? Math.floor(r.speed * 1.5) : r.speed
-        all.push({ species: sp, variant: v, speed, detail: r.detail, merged: 0 })
+        // Mouchoir pour tous : pas pour les Méga (elles tiennent leur pierre), ni en double sur un set qui l'a déjà
+        const scarfed = config.scarfAll && !isMega(sp) && !(v === 'mostPlayed' && mostPlayedSet(sp).item === 'Choice Scarf')
+        const speed = scarfed ? Math.floor(r.speed * 1.5) : r.speed
+        all.push({ species: sp, variant: v, speed, detail: r.detail, merged: 0, scarfed })
       }
     }
     // Fusion : les variantes d'un même Pokémon toutes hors de portée sont regroupées sur la plus rapide
@@ -131,7 +135,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
       .filter((r) => { const k = `${r.species}:${r.speed}`; if (seen.has(k)) return false; seen.add(k); return true })
       .sort((a, b) => b.speed - a.speed || a.species.localeCompare(b.species))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, lang, mySpeed, myInfo, natureMod, factor])
+  }, [config, lang, mySpeed, myInfo, natureMod, factor, me.species])
 
   const nq = normalize(q)
   const shown = nq ? rows.filter((r) => normalize(label('species', r.species, lang)).includes(nq) || normalize(r.species).includes(nq)) : rows
@@ -195,7 +199,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
                       {SPRITES[r.species] && <img src={SPRITES[r.species]} alt="" className="inline-block h-6 w-6 object-contain" style={{ imageRendering: 'pixelated' }} />}
                       <span className="font-medium">{label('species', r.species, lang)}</span>
                       {info.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}
-                      <span className="text-muted">{t.speedVariant[r.variant]}{r.detail ? ` (${r.detail})` : ''}{config.scarfAll ? ` · ${t.scarfShort.replace(':', '')}` : ''}</span>
+                      <span className="text-muted">{t.speedVariant[r.variant]}{r.detail ? ` (${r.detail})` : ''}{r.scarfed ? ` · ${t.scarfShort.replace(':', '')}` : ''}</span>
                       {r.merged > 0 && <span className="rounded bg-surface-2 px-1 text-[10px] text-muted" title={t.speedMergedHint}>+{r.merged}</span>}
                     </span>
                   </td>

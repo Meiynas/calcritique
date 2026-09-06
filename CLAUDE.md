@@ -283,6 +283,11 @@ Ajouté en v1.10.1 (6 septembre 2026) : mise à jour automatique des données.
 - Premier essai (v1.10.2, publiée par le robot) : le fetch des statistiques a échoué (cause à lire dans les annotations du run, désormais émises en "::error::"), mais la version a quand même été publiée car package-lock.json portait encore "1.4.0" (désormais aligné par bump-version). Le déploiement du site appelé depuis data-refresh exigeait les permissions explicites sur le job appelant (ajoutées en v1.10.3).
 - Ce qui reste manuel : nouveaux Pokémon / attaques (fichiers names, extra, learnsets, movedesc, sprites à régénérer depuis PokéAPI, et le moteur doit les connaître).
 
+Ajouté en v1.10.5 (6 septembre 2026) :
+- Mise à jour automatique validée : le run manuel a rafraîchi src/data/usage.json (235 Pokémon) et publié tout seul la v1.10.4 (installeur + site). Elle tourne chaque nuit.
+- Speed tiers : "Mouchoir Choix pour tous" ne s'applique pas aux Méga (elles tiennent leur pierre) ; le Pokémon comparé n'apparaît plus dans la liste face à lui-même.
+- Procédure quand le robot a publié : dans l'espace de travail cloud, `git fetch origin && git reset --hard origin/main` avant toute modification, et sur le PC `cgit fetch` puis `cgit reset --soft origin/main` avant de committer (le montage interdit la suppression de fichiers, donc `cgit pull` échoue).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -298,6 +303,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.10.5 : Méga sans Mouchoir dans les speed tiers, pas d'auto-comparaison. v1.10.4 publiée automatiquement par le robot avec des données fraîches.
 - 2026-09-06 : v1.10.3 : correctifs du workflow de mise à jour (permissions des jobs appelés, versions de package-lock, erreurs annotées).
 - 2026-09-06 : v1.10.2 : première version publiée automatiquement par le robot (test du workflow).
 - 2026-09-06 : v1.10.1 : mise à jour automatique nocturne des statistiques d'usage et du moteur (workflow data-refresh), publication automatique d'une nouvelle version quand les données changent.
