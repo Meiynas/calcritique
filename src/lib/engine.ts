@@ -95,6 +95,8 @@ export function effectiveAccuracy(
   attacker: Pokemon,
   defender: Pokemon,
   field: Field,
+  accStage = 0,
+  evaStage = 0,
 ): AccuracyDetail {
   const info = EXTRA.moves[moveName]
   const base = info ? info.acc : 100
@@ -122,6 +124,12 @@ export function effectiveAccuracy(
   if (defender.hasItem('Bright Powder', 'Lax Incense')) { acc *= 0.9; notes.push('acc.brightPowder') }
   if (defender.hasAbility('Sand Veil') && field.hasWeather('Sand')) { acc *= 0.8; notes.push('acc.sandVeil') }
   if (defender.hasAbility('Snow Cloak') && field.hasWeather('Snow', 'Hail')) { acc *= 0.8; notes.push('acc.snowCloak') }
+  const evasion = attacker.hasAbility('Keen Eye', 'Mind\'s Eye', 'Illuminate') ? Math.min(0, evaStage) : evaStage
+  const stage = Math.max(-6, Math.min(6, accStage - evasion))
+  if (stage !== 0) {
+    acc *= stage > 0 ? (3 + stage) / 3 : 3 / (3 - stage)
+    notes.push('acc.stages')
+  }
   return { base, effective: Math.min(100, Math.round(acc * 10) / 10), notes }
 }
 
@@ -169,6 +177,10 @@ function probAtLeast(d: Dist, threshold: number): number {
 
 export interface MoveResult {
   move: string
+  /** Bloquée par Abri (aucun dégât) */
+  blockedByProtect: boolean
+  /** Passe à travers Abri grâce à... (clé de traduction) */
+  protectBypass?: 'feint' | 'unseenFist'
   category: 'Physical' | 'Special' | 'Status'
   type: string
   basePower: number
@@ -189,7 +201,7 @@ export interface MoveResult {
   rolls: number[]
 }
 
-export function critChanceFor(moveName: string, attacker: Pokemon): number {
+export function critChanceFor(moveName: string, attacker: Pokemon, extraStage = 0): number {
   const move = gen.moves.get(toID(moveName))
   if (move?.willCrit) return 1
   if (attacker.hasAbility('Merciless')) return 1 // approximation : cible empoisonnée
@@ -197,6 +209,7 @@ export function critChanceFor(moveName: string, attacker: Pokemon): number {
   if (['Slash', 'Night Slash', 'Shadow Claw', 'Stone Edge', 'Cross Chop', 'Leaf Blade', 'Psycho Cut', 'Attack Order', 'Spacial Rend', 'Aeroblast', 'Air Cutter', 'Blaze Kick', 'Crabhammer', 'Cross Poison', 'Drill Run', 'Karate Chop', 'Poison Tail', 'Razor Leaf', 'Razor Wind', 'Sky Attack', 'Snipe Shot', 'Esper Wing', 'Triple Arrows', 'Ivy Cudgel', 'Aqua Cutter', 'Dire Claw'].includes(moveName)) stage += 1
   if (attacker.hasAbility('Super Luck')) stage += 1
   if (attacker.hasItem('Scope Lens', 'Razor Claw')) stage += 1
+  stage += extraStage
   return [1 / 24, 1 / 8, 1 / 2, 1][Math.min(3, stage)]
 }
 
@@ -220,12 +233,21 @@ export function computeMove(
     return calculate(gen, attacker.clone(), defender.clone(), move, field.clone())
   }
 
+  // Abri : bloque tout sauf les attaques qui le percent (Ruse...) ou Poing Invisible sur une attaque de contact
+  let blockedByProtect = false
+  let protectBypass: MoveResult['protectBypass']
+  if (defenderState.protect && info.category !== 'Status') {
+    if (info.breaksProtect) protectBypass = 'feint'
+    else if (attacker.hasAbility('Unseen Fist') && info.flags?.contact) protectBypass = 'unseenFist'
+    else blockedByProtect = true
+  }
+
   const normal = run(false)
   const maxHP = defender.maxHP()
   const curHP = defender.curHP()
   const [min, max] = normal.range()
 
-  const critChance = options.critMode === 'never' ? 0 : options.critMode === 'always' ? 1 : critChanceFor(moveName, attacker)
+  const critChance = options.critMode === 'never' ? 0 : options.critMode === 'always' ? 1 : critChanceFor(moveName, attacker, attackerState.critStage ?? 0)
   const distNormal = damageDist(normal.damage)
   let distOne = distNormal
   if (critChance > 0) {
@@ -233,7 +255,7 @@ export function computeMove(
     distOne = critChance >= 1 ? damageDist(crit.damage) : mix(distNormal, 1 - critChance, damageDist(crit.damage), critChance)
   }
 
-  const acc = effectiveAccuracy(moveName, attacker, defender, field)
+  const acc = effectiveAccuracy(moveName, attacker, defender, field, attackerState.accStage ?? 0, defenderState.evaStage ?? 0)
   const hitP = options.useAccuracy ? acc.effective / 100 : 1
   const distOneWithMiss: Dist = hitP >= 1 ? distOne : mix(uniform([0]), 1 - hitP, distOne, hitP)
 
@@ -260,8 +282,19 @@ export function computeMove(
   const displayCrit = options.critMode === 'always' ? run(true) : null
   const [dmin, dmax] = displayCrit ? displayCrit.range() : [min, max]
 
+  if (blockedByProtect) {
+    return {
+      move: moveName, blockedByProtect, protectBypass,
+      category: (info.category ?? 'Status') as MoveResult['category'], type: normal.move.type, basePower: normal.move.bp,
+      spread: false, min: 0, max: 0, minPct: 0, maxPct: 0, maxHP, curHP, accuracy: acc, critChance,
+      koRollsOnly: koRollsOnly.map(() => 0), koTrue: koTrue.map(() => 0), desc: '', rolls: [],
+    }
+  }
+
   return {
     move: moveName,
+    blockedByProtect,
+    protectBypass,
     category: (info.category ?? 'Status') as MoveResult['category'],
     type: normal.move.type,
     basePower: normal.move.bp,

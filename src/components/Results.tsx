@@ -10,6 +10,7 @@ interface Props {
   attacker: PokemonState
   defender: PokemonState
   lang: Lang
+  activeMove: number
 }
 
 function pct(p: number): string {
@@ -41,9 +42,10 @@ function describe(p: PokemonState, lang: Lang, offensive: boolean, category: str
   return `${label('species', p.species, lang)} (${label('natures', p.nature, lang)}, ${parts.join(', ')})`
 }
 
-export default function Results({ results, attacker, defender, lang }: Props) {
+export default function Results({ results, attacker, defender, lang, activeMove }: Props) {
   const t = dict(lang)
-  const shown = results.filter((r): r is MoveResult => !!r && r.category !== 'Status')
+  const indexed = results.map((r, i) => ({ r, i })).filter((x): x is { r: MoveResult; i: number } => !!x.r && x.r.category !== 'Status')
+  const shown = [...indexed.filter((x) => x.i === activeMove), ...indexed.filter((x) => x.i !== activeMove)]
 
   return (
     <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
@@ -53,8 +55,8 @@ export default function Results({ results, attacker, defender, lang }: Props) {
       </div>
       {shown.length === 0 && <p className="text-sm text-muted">{t.resultsHint}</p>}
       <div className="grid gap-3">
-      {shown.map((r) => (
-        <article key={r.move} className="rounded-lg border border-border bg-surface-2 p-3">
+      {shown.map(({ r, i }) => (
+        <article key={r.move} className={'rounded-lg border bg-surface-2 p-3 ' + (i === activeMove ? 'border-accent ring-1 ring-accent/50' : 'border-border')}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <TypeBadge type={r.type} lang={lang} />
@@ -63,9 +65,14 @@ export default function Results({ results, attacker, defender, lang }: Props) {
               {r.spread && <span className="text-[11px] text-muted italic">{t.spread}</span>}
             </div>
             <div className="text-right">
+              {r.blockedByProtect ? (
+                <div className="text-base font-bold text-emerald-300">🛡 {t.blockedByProtect}</div>
+              ) : (
               <div className="text-lg font-bold tabular-nums">
                 {r.minPct}% – {r.maxPct}%
               </div>
+              )}
+              {r.protectBypass && <div className="text-[11px] text-emerald-300">{r.protectBypass === 'feint' ? t.bypassFeint : t.bypassUnseenFist}</div>}
               <div className="text-xs text-muted tabular-nums">{r.min} – {r.max} / {r.curHP}{r.curHP !== r.maxHP ? ` (${r.maxHP})` : ''}</div>
             </div>
           </div>

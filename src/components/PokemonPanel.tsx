@@ -1,13 +1,17 @@
-// Panneau d'un Pokémon : espèce, nature, SP, objet, talent, Téra, attaques, statut, PV.
-import { useMemo } from 'react'
+// Panneau d'un Pokémon : espèce, nature, SP, objet, talent, Téra, attaques, statut, PV, stades, Abri.
+import { useMemo, useState } from 'react'
 import type { Lang, PokemonState, StatKey, StatusKey } from '../model'
 import { STAT_KEYS } from '../model'
 import { dict } from '../i18n'
 import { label, NAMES } from '../lib/names'
-import { EXTRA, SPECIES_KEYS, TYPE_NAMES, finalStats, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
+import { EXTRA, TYPE_NAMES, finalStats, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
 import { SP_MAX_STAT, SP_MAX_TOTAL, spTotal } from '../lib/champions'
+import { canLearn, mostPlayedSet, usagePercent } from '../lib/usage'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
+import MovePicker from './MovePicker'
+import ItemPicker from './ItemPicker'
+import PokemonPicker from './PokemonPicker'
 
 interface Props {
   title: string
@@ -15,13 +19,16 @@ interface Props {
   value: PokemonState
   onChange: (p: PokemonState) => void
   onClear?: () => void
+  /** Espèces de la même équipe (pour les suggestions de coéquipiers) */
+  teamSpecies?: string[]
   lang: Lang
 }
 
 const NATURE_KEYS = Object.keys(NAMES.natures)
 const STATUSES: StatusKey[] = ['', 'brn', 'par', 'psn', 'tox', 'slp', 'frz']
+const STAGES = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
 
-export default function PokemonPanel({ title, role, value, onChange, onClear, lang }: Props) {
+export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], lang }: Props) {
   const t = dict(lang)
   const species = speciesInfo(value.species)
   const stats = useMemo(() => finalStats(value), [value])
@@ -29,6 +36,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
   const over = total > SP_MAX_TOTAL
   const nature = natureInfo(value.nature)
   const abilities = EXTRA.species[value.species]?.abilities ?? []
+  const [picker, setPicker] = useState<null | { kind: 'move'; slot: number } | { kind: 'item' } | { kind: 'pokemon' }>(null)
 
   function set<K extends keyof PokemonState>(key: K, v: PokemonState[K]) {
     onChange({ ...value, [key]: v })
@@ -43,34 +51,53 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
   function setMove(i: number, m: string) {
     const moves = [...value.moves]
     moves[i] = m
-    onChange({ ...value, moves })
+    onChange({ ...value, moves, activeMove: m ? i : value.activeMove })
   }
-  function changeSpecies(key: string) {
-    const abl = EXTRA.species[key]?.abilities ?? []
-    onChange({ ...value, species: key, ability: abl.includes(value.ability) ? value.ability : (abl[0] ?? '') })
+  function pickSpecies(key: string) {
+    // Nouveau Pokémon : on part de son set le plus joué
+    onChange({ ...mostPlayedSet(key), activeMove: 0 })
   }
 
   const accent = role === 'attacker' ? 'text-accent' : 'text-sky-400'
+
+  if (!value.species || !species) {
+    return (
+      <section className="rounded-xl border border-dashed border-border bg-surface/70 p-4 flex flex-col items-center gap-3">
+        <h2 className={'text-sm font-semibold uppercase tracking-wide ' + accent}>{title}</h2>
+        <button type="button" onClick={() => setPicker({ kind: 'pokemon' })} className="rounded-md border border-border bg-surface-2 px-4 py-2 text-sm hover:border-accent">
+          + {t.emptySlot}
+        </button>
+        {picker?.kind === 'pokemon' && <PokemonPicker team={teamSpecies} lang={lang} onPick={(s) => { pickSpecies(s); setPicker(null) }} onClose={() => setPicker(null)} />}
+      </section>
+    )
+  }
 
   return (
     <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className={'text-sm font-semibold uppercase tracking-wide ' + accent}>{title}</h2>
         <div className="flex items-center gap-2">
-        {onClear && value.species && (
-          <button type="button" onClick={onClear} className="rounded border border-border px-1.5 py-0.5 text-[11px] text-muted hover:text-text">{t.clearSlot}</button>
-        )}
-        {species && (
+          {onClear && (
+            <button type="button" onClick={onClear} className="rounded border border-border px-1.5 py-0.5 text-[11px] text-muted hover:text-text">{t.clearSlot}</button>
+          )}
           <div className="flex gap-1">
             {species.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} />)}
             {value.teraType && <span className="text-xs text-muted self-center">→</span>}
             {value.teraType && <TypeBadge type={value.teraType} lang={lang} tera />}
           </div>
-        )}
         </div>
       </div>
 
-      <SearchSelect kind="species" value={value.species} onChange={changeSpecies} lang={lang} placeholder={t.searchPokemon} keys={SPECIES_KEYS} />
+      {/* Espèce */}
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => setPicker({ kind: 'pokemon' })} className="flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-left text-base font-semibold hover:border-accent">
+          {label('species', value.species, lang)}
+          <span className="ml-2 text-[11px] font-normal text-muted">{t.change}</span>
+        </button>
+        <button type="button" onClick={() => onChange({ ...mostPlayedSet(value.species), activeMove: 0 })} title={t.applyMostPlayed} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
+          ★ {t.applyMostPlayed}
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <Field label={t.nature}>
@@ -78,7 +105,8 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
             {NATURE_KEYS.map((n) => {
               const info = natureInfo(n)
               const eff = info?.plus && info.plus !== info.minus ? ` (+${t.statNames[info.plus as StatKey]} −${t.statNames[info.minus as StatKey]})` : ''
-              return <option key={n} value={n}>{label('natures', n, lang)}{eff}</option>
+              const pct = usagePercent(value.species, 'natures', n)
+              return <option key={n} value={n}>{label('natures', n, lang)}{eff}{pct !== undefined ? ` · ${pct}%` : ''}</option>
             })}
           </select>
         </Field>
@@ -89,7 +117,10 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
           </select>
         </Field>
         <Field label={t.item}>
-          <SearchSelect kind="items" value={value.item} onChange={(v) => set('item', v)} lang={lang} placeholder={t.searchItem} allowEmpty emptyLabel={t.none} />
+          <button type="button" onClick={() => setPicker({ kind: 'item' })} className="input text-left hover:border-accent">
+            {value.item ? label('items', value.item, lang) : <span className="text-muted">{t.none}</span>}
+            <UsageTag pct={value.item ? usagePercent(value.species, 'items', value.item) : undefined} />
+          </button>
         </Field>
         <Field label={t.ability}>
           <SearchSelect kind="abilities" value={value.ability} onChange={(v) => set('ability', v)} lang={lang} placeholder={t.searchAbility} suggested={abilities} allowEmpty emptyLabel={t.none} />
@@ -118,7 +149,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
                   <td className={'py-1 font-medium ' + (plus ? 'text-emerald-400' : minus ? 'text-accent' : '')}>
                     {t.statNames[k]}{plus ? ' +' : minus ? ' −' : ''}
                   </td>
-                  <td className="text-center text-muted">{species?.baseStats[k]}</td>
+                  <td className="text-center text-muted">{species.baseStats[k]}</td>
                   <td className="text-center">
                     <input
                       type="number" min={0} max={SP_MAX_STAT} value={value.sp[k]}
@@ -130,7 +161,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
                   <td className="text-center">
                     {k !== 'hp' && (
                       <select className="rounded border border-border bg-surface-2 px-1 py-0.5" value={value.boosts[k]} onChange={(e) => setBoost(k, Number(e.target.value))}>
-                        {[6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6].map((b) => <option key={b} value={b}>{b > 0 ? '+' + b : b}</option>)}
+                        {STAGES.map((b) => <option key={b} value={b}>{b > 0 ? '+' + b : b}</option>)}
                       </select>
                     )}
                   </td>
@@ -139,14 +170,55 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
             })}
           </tbody>
         </table>
+        {/* Stades précision / esquive / critique et Abri */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+          <span className="font-semibold uppercase tracking-wide">{t.stages}</span>
+          <label className="flex items-center gap-1">{t.accStage}
+            <select className="rounded border border-border bg-surface-2 px-1 py-0.5 text-text" value={value.accStage} onChange={(e) => set('accStage', Number(e.target.value))}>
+              {STAGES.map((b) => <option key={b} value={b}>{b > 0 ? '+' + b : b}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1">{t.evaStage}
+            <select className="rounded border border-border bg-surface-2 px-1 py-0.5 text-text" value={value.evaStage} onChange={(e) => set('evaStage', Number(e.target.value))}>
+              {STAGES.map((b) => <option key={b} value={b}>{b > 0 ? '+' + b : b}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1">{t.critStage}
+            <select className="rounded border border-border bg-surface-2 px-1 py-0.5 text-text" value={value.critStage} onChange={(e) => set('critStage', Number(e.target.value))}>
+              {[0, 1, 2, 3].map((b) => <option key={b} value={b}>+{b}</option>)}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => set('protect', !value.protect)}
+            title={t.protectHint}
+            aria-pressed={value.protect}
+            className={'ml-auto rounded-md border px-2 py-0.5 text-xs font-medium ' + (value.protect ? 'border-emerald-400 bg-emerald-500/25 text-emerald-100 ring-1 ring-white/30' : 'border-border bg-surface-2 text-muted hover:text-text')}
+          >
+            🛡 {t.protect}
+          </button>
+        </div>
       </div>
 
-      {/* Attaques */}
+      {/* Attaques : clic = mettre en avant, ✎ = changer */}
       <div>
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.moves}</span>
-        <div className="mt-1 grid grid-cols-1 gap-1.5">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.moves}</span>
+          <span className="text-[10px] text-muted">{t.activeMoveHint}</span>
+        </div>
+        <div className="mt-1 grid grid-cols-1 gap-1">
           {value.moves.map((m, i) => (
-            <SearchSelect key={i} kind="moves" value={m} onChange={(v) => setMove(i, v)} lang={lang} placeholder={t.searchMove} allowEmpty emptyLabel={t.none} renderExtra={(e) => <MoveExtra move={e.key} lang={lang} />} />
+            <MoveSlot
+              key={i}
+              move={m}
+              species={value.species}
+              active={value.activeMove === i}
+              lang={lang}
+              onSelect={() => (m ? set('activeMove', i) : setPicker({ kind: 'move', slot: i }))}
+              onEdit={() => setPicker({ kind: 'move', slot: i })}
+              onClear={() => setMove(i, '')}
+              role={role}
+            />
           ))}
         </div>
       </div>
@@ -165,6 +237,12 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, la
           </div>
         </Field>
       </div>
+
+      {picker?.kind === 'move' && (
+        <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(picker.slot, m); setPicker(null) }} onClose={() => setPicker(null)} />
+      )}
+      {picker?.kind === 'item' && <ItemPicker species={value.species} lang={lang} onPick={(i) => { set('item', i); setPicker(null) }} onClose={() => setPicker(null)} />}
+      {picker?.kind === 'pokemon' && <PokemonPicker team={teamSpecies} lang={lang} onPick={(s) => { pickSpecies(s); setPicker(null) }} onClose={() => setPicker(null)} />}
     </section>
   )
 }
@@ -178,14 +256,41 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function MoveExtra({ move, lang }: { move: string; lang: Lang }) {
-  const info = EXTRA.moves[move]
-  const m = moveInfo(move)
+function UsageTag({ pct }: { pct?: number }) {
+  if (pct === undefined) return null
+  return <span className="ml-2 text-[10px] text-emerald-300">{pct}%</span>
+}
+
+function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role }: {
+  move: string; species: string; active: boolean; lang: Lang; onSelect: () => void; onEdit: () => void; onClear: () => void; role: 'attacker' | 'defender'
+}) {
+  const t = dict(lang)
+  const info = move ? moveInfo(move) : undefined
+  const extra = move ? EXTRA.moves[move] : undefined
+  const pct = move ? usagePercent(species, 'moves', move) : undefined
+  const learnable = !move || canLearn(species, move)
+  const ring = active ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-border bg-surface-2 hover:border-muted'
   return (
-    <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted">
-      {m && <TypeBadge type={m.type} lang={lang} small />}
-      {m && m.basePower > 0 && <span>{m.basePower}</span>}
-      {info && info.acc !== null && info.acc < 100 && <span>{info.acc}%</span>}
-    </span>
+    <div className={'flex items-center gap-1 rounded-md border pl-2 pr-1 py-1 text-sm ' + ring}>
+      <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        {info ? (
+          <>
+            <TypeBadge type={info.type} lang={lang} small />
+            <span className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}</span>
+            {!learnable && <span className="text-[10px] text-accent" title={t.notLearnable}>⚠</span>}
+            <span className="text-[11px] tabular-nums text-muted">{info.category === 'Status' ? '·' : info.basePower}{extra?.acc !== null && extra?.acc !== undefined && extra.acc < 100 ? ` · ${extra.acc}%` : ''}</span>
+            {pct !== undefined && <span className="w-11 text-right text-[10px] tabular-nums text-emerald-300">{pct}%</span>}
+          </>
+        ) : (
+          <span className="text-muted">+ {t.searchMove}</span>
+        )}
+      </button>
+      {move && (
+        <>
+          <button type="button" onClick={onEdit} title={t.change} className="rounded px-1 text-xs text-muted hover:bg-surface hover:text-text">✎</button>
+          <button type="button" onClick={onClear} title={t.none} className="rounded px-1 text-xs text-muted hover:bg-surface hover:text-text">×</button>
+        </>
+      )}
+    </div>
   )
 }

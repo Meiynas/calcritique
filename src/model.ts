@@ -22,6 +22,11 @@ export interface PokemonState {
   boosts: Record<StatKey, number> // -6 à +6 (hp ignoré)
   status: StatusKey
   curHPPercent: number // 1 à 100
+  accStage: number // stade de précision, -6 à +6
+  evaStage: number // stade d'esquive, -6 à +6
+  critStage: number // bonus de coup critique (0 à 3), ex : Focus Energy = +2
+  protect: boolean // utilise Abri ce tour (pour Ruse, Poing Invisible...)
+  activeMove: number // attaque mise en avant dans les résultats (0 à 3)
 }
 
 /** Effets propres à un côté du terrain (une équipe). */
@@ -79,6 +84,11 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     boosts: zeroStats(),
     status: '',
     curHPPercent: 100,
+    accStage: 0,
+    evaStage: 0,
+    critStage: 0,
+    protect: false,
+    activeMove: 0,
     ...overrides,
   }
 }
@@ -109,66 +119,27 @@ export const defaultField = (): FieldState => ({
   right: defaultSide(),
 })
 
-function starterTeams(): Record<SideKey, PokemonState[]> {
-  const left = [
-    defaultPokemon('Kingambit', {
-      nature: 'Adamant',
-      sp: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 },
-      item: 'Black Glasses',
-      ability: 'Supreme Overlord',
-      moves: ['Kowtow Cleave', 'Sucker Punch', 'Iron Head', 'Swords Dance'],
-    }),
-    defaultPokemon('Flutter Mane', {
-      nature: 'Timid',
-      sp: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 },
-      item: 'Choice Specs',
-      ability: 'Protosynthesis',
-      moves: ['Moonblast', 'Shadow Ball', 'Dazzling Gleam', 'Thunderbolt'],
-    }),
-    defaultPokemon('Incineroar', {
-      nature: 'Careful',
-      sp: { hp: 32, atk: 0, def: 2, spa: 0, spd: 32, spe: 0 },
-      item: 'Safety Goggles',
-      ability: 'Intimidate',
-      moves: ['Fake Out', 'Knock Off', 'Flare Blitz', 'Parting Shot'],
-    }),
-    emptyPokemon(),
-    emptyPokemon(),
-    emptyPokemon(),
-  ]
-  const right = [
-    defaultPokemon('Rillaboom', {
-      nature: 'Adamant',
-      sp: { hp: 32, atk: 32, def: 2, spa: 0, spd: 0, spe: 0 },
-      item: 'Assault Vest',
-      ability: 'Grassy Surge',
-      moves: ['Wood Hammer', 'Grassy Glide', 'Fake Out', 'U-turn'],
-    }),
-    defaultPokemon('Landorus-Therian', {
-      nature: 'Adamant',
-      sp: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 },
-      item: 'Choice Scarf',
-      ability: 'Intimidate',
-      moves: ['Earthquake', 'Rock Slide', 'U-turn', 'Stomping Tantrum'],
-    }),
-    defaultPokemon('Amoonguss', {
-      nature: 'Bold',
-      sp: { hp: 32, atk: 0, def: 32, spa: 0, spd: 2, spe: 0 },
-      item: 'Rocky Helmet',
-      ability: 'Regenerator',
-      moves: ['Spore', 'Rage Powder', 'Pollen Puff', 'Sludge Bomb'],
-    }),
-    emptyPokemon(),
-    emptyPokemon(),
-    emptyPokemon(),
-  ]
-  return { left, right }
+/** Équipes de départ (pool Champions) ; les sets sont remplis à partir des statistiques d'usage. */
+export const STARTER_SPECIES: Record<SideKey, string[]> = {
+  left: ['Kingambit', 'Sneasler', 'Incineroar'],
+  right: ['Garchomp', 'Whimsicott', 'Sinistcha'],
 }
 
-export function defaultState(): AppState {
+export type SetBuilder = (species: string) => PokemonState
+
+function starterTeams(build: SetBuilder): Record<SideKey, PokemonState[]> {
+  const make = (names: string[]) => {
+    const team = names.map((n) => build(n))
+    while (team.length < TEAM_SIZE) team.push(emptyPokemon())
+    return team
+  }
+  return { left: make(STARTER_SPECIES.left), right: make(STARTER_SPECIES.right) }
+}
+
+export function defaultState(build: SetBuilder = (sp) => defaultPokemon(sp)): AppState {
   return {
     lang: 'fr',
-    teams: starterTeams(),
+    teams: starterTeams(build),
     selected: { left: 0, right: 0 },
     attackerSide: 'left',
     field: defaultField(),
@@ -187,7 +158,7 @@ export function activePair(state: AppState): { attacker: PokemonState; defender:
   return { attacker: state.teams[a][state.selected[a]], defender: state.teams[d][state.selected[d]] }
 }
 
-const STORAGE_KEY = 'calcritique.state.v2'
+const STORAGE_KEY = 'calcritique.state.v3'
 
 function fixTeam(team: unknown): PokemonState[] {
   const arr = Array.isArray(team) ? (team as Partial<PokemonState>[]) : []
@@ -196,10 +167,10 @@ function fixTeam(team: unknown): PokemonState[] {
   return out
 }
 
-export function loadState(): AppState {
+export function loadState(build?: SetBuilder): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return defaultState()
+    if (!raw) return defaultState(build)
     const parsed = JSON.parse(raw) as Partial<AppState>
     const base = defaultState()
     const teams = { left: fixTeam(parsed.teams?.left), right: fixTeam(parsed.teams?.right) }
@@ -218,7 +189,7 @@ export function loadState(): AppState {
       options: { ...base.options, ...parsed.options },
     }
   } catch {
-    return defaultState()
+    return defaultState(build)
   }
 }
 

@@ -3,6 +3,7 @@ import { APP_VERSION, checkForUpdate, isDesktop, type UpdateStatus } from './upd
 import { activePair, defaultState, loadState, otherSide, saveState, type AppState, type SideKey } from './model'
 import { dict } from './i18n'
 import { computeMove, speedInfo } from './lib/engine'
+import { mostPlayedSet } from './lib/usage'
 import { label } from './lib/names'
 import TeamColumn from './components/TeamColumn'
 import FieldPanel from './components/FieldPanel'
@@ -11,7 +12,7 @@ import SpeedBar from './components/SpeedBar'
 import FxLayer from './components/FxLayer'
 
 export default function App() {
-  const [state, setState] = useState<AppState>(() => loadState())
+  const [state, setState] = useState<AppState>(() => loadState(mostPlayedSet))
   const [update, setUpdate] = useState<UpdateStatus>({ state: 'idle' })
   const t = dict(state.lang)
 
@@ -40,7 +41,7 @@ export default function App() {
   }
 
   function reset() {
-    if (confirm(t.resetConfirm)) setState({ ...defaultState(), lang: state.lang })
+    if (confirm(t.resetConfirm)) setState({ ...defaultState(mostPlayedSet), lang: state.lang })
   }
 
   const attackerName = label('species', attacker.species, state.lang)
@@ -115,7 +116,7 @@ export default function App() {
               <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">{t.noPair}</div>
             )}
 
-            <Results results={results} attacker={attacker} defender={defender} lang={state.lang} />
+            <Results results={results} attacker={attacker} defender={defender} lang={state.lang} activeMove={attacker.activeMove ?? 0} />
 
             <FieldPanel value={state.field} onChange={(f) => setState((s) => ({ ...s, field: f }))} options={state.options} onOptions={(o) => setState((s) => ({ ...s, options: o }))} lang={state.lang} />
           </div>

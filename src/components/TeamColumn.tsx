@@ -29,7 +29,7 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
     next[i] = p
     onChangeTeam(next)
   }
-  const wallClass = [sideState.reflect && 'side-reflect', sideState.lightScreen && 'side-lightscreen', sideState.auroraVeil && 'side-auroraveil'].filter(Boolean).join(' ')
+  const wallClass = ['side-fx', sideState.reflect && 'side-reflect', sideState.lightScreen && 'side-lightscreen', sideState.auroraVeil && 'side-auroraveil', sideState.helpingHand && 'side-helpinghand', sideState.friendGuard && 'side-friendguard'].filter(Boolean).join(' ')
   const roleColor = isAttacker ? 'text-accent' : 'text-sky-400'
   const roleLabel = isAttacker ? t.attacker : t.defender
 
@@ -67,6 +67,7 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
         value={team[selected]}
         onChange={(p) => setMon(selected, p)}
         onClear={() => setMon(selected, emptyPokemon())}
+        teamSpecies={team.map((p) => p.species)}
         lang={lang}
       />
     </div>

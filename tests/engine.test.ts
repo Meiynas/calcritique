@@ -74,3 +74,20 @@ test('doubles : une attaque à cibles multiples fait x0,75', () => {
   // Séisme 100 BP x0,75 = 75 BP effectifs, Colère Sourde 75 BP : dégâts proches
   assert.ok(Math.abs(spread.max - single.max) <= 2)
 })
+
+test('Abri : bloque une attaque normale, pas Ruse ni Poing Invisible sur un contact', () => {
+  const atk = defaultPokemon('Sneasler', { nature: 'Jolly', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, ability: 'Unburden' })
+  const def = defaultPokemon('Garchomp', { protect: true })
+  assert.ok(computeMove('Close Combat', atk, def, field, opts)!.blockedByProtect)
+  assert.equal(computeMove('Feint', atk, def, field, opts)!.protectBypass, 'feint')
+  const urshifu = defaultPokemon('Urshifu', { ability: 'Unseen Fist', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 } })
+  assert.equal(computeMove('Close Combat', urshifu, def, field, opts)!.protectBypass, 'unseenFist')
+})
+
+test('stades : -1 esquive et +1 précision se compensent', () => {
+  const atk = defaultPokemon('Gengar', { accStage: 1, moves: ['Focus Blast', '', '', ''] })
+  const def = defaultPokemon('Kingambit', { evaStage: 1 })
+  assert.equal(computeMove('Focus Blast', atk, def, field, opts)!.accuracy.effective, 70)
+  const def2 = defaultPokemon('Kingambit', { evaStage: 0 })
+  assert.ok(Math.abs(computeMove('Focus Blast', atk, def2, field, opts)!.accuracy.effective - 93.3) < 0.2)
+})
