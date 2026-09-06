@@ -236,6 +236,10 @@ Ajouté en v1.7.0 (retours du 6 septembre 2026, tour complet) :
 - Jauge "Chances" : la chance d'être apeuré est maintenant affichée sur l'attaque de la CIBLE ("27 % apeuré avant d'agir"), calculée à partir des attaques adverses jouées avant elle dans le scénario moyen (précision et statut de l'attaquant compris). Elle n'apparaît plus sur l'attaque qui apeure. Enchaînement : apeuré -> statut du lanceur -> précision -> statut infligé -> critique.
 - 15 tests automatiques (arrivée sur le terrain avec Piège de Roc et Intimidation / Acharné, contrecoup, brûlure + sable + Restes, Baie Sitrus).
 
+Ajouté en v1.7.1 (retours du 6 septembre 2026, lisibilité des chances) :
+- Jauge "Chances" : la légende est sous la barre, dans l'ordre des segments, avec le pourcentage "touche normalement" (ex. "27 % apeuré avant d'agir · 70 % touche normalement · 3 % crit").
+- Lignes renommées "Vrai taux de KO" et "Dégâts seuls", avec une phrase d'explication sous le titre "Détail par attaque" et des infobulles. Le vrai taux de KO inclut maintenant la chance d'agir (apeuré avant d'agir, paralysie totale, sommeil, gel) en plus de la précision et du critique : computeMove reçoit battle.actChance qui multiplie la chance de toucher de chaque tentative. "Dégâts seuls" = les 16 rolls uniquement, comme si l'attaque touchait à coup sûr sans critique.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -251,6 +255,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.7.1 : légende des chances sous la barre avec "touche normalement", vrai taux de KO pondéré par la chance d'agir, libellés explicites.
 - 2026-09-06 : v1.7.0 : mode pièges, action "Arrivée sur le terrain" (pièges + talents d'entrée), drain / contrecoup / Orbe Vie / Baie Sitrus dans la timeline, effets de fin de tour, chance d'être apeuré affichée sur l'attaque de la cible.
 - 2026-09-06 : v1.6.1 : taux Champions (para 12,5 %, dégel 25 %), "apeuré", jauge des chances pondérée en chaîne, attaques à effet de statut (Plaquage, Ébullition, Spore...) dans le tour et la jauge.
 - 2026-09-06 : v1.6.0 : flinch, statuts qui empêchent d'agir (para / sommeil / gel) dans le tour et dans la jauge des chances, lignes du tableau dans l'ordre réel, statut modifiable dans la vue Attaques.

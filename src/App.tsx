@@ -55,9 +55,10 @@ export default function App() {
           notFlinched *= 1 - act * acc * fc
         }
         const preFlinch = 1 - notFlinched
+        const actChance = (1 - preFlinch) * (1 - cantActChance(a.pokemon, a.move).chance)
         return a.targets.map((tg) => {
           const defender = state.teams[tg.side][tg.index]
-          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, preFlinch, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length }) }
+          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, preFlinch, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length, actChance }) }
         })
       }),
     [turn, state],
@@ -181,6 +182,7 @@ export default function App() {
             {details.filter((d) => d.result && d.result.category !== 'Status').length > 0 && (
               <section className="flex flex-col gap-3">
                 <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted">{t.detailsTitle}</h2>
+                <p className="px-1 -mt-2 text-[11px] text-muted">{t.koExplain}</p>
                 {details.map((d) =>
                   d.result && d.result.category !== 'Status' ? (
                     <div key={`${d.actor.side}:${d.actor.index}>${d.target.side}:${d.target.index}`}>

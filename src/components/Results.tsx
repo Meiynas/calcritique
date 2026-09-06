@@ -101,11 +101,11 @@ export default function Results({ results, attacker, defender, lang, activeMove,
             </thead>
             <tbody>
               <tr>
-                <td className="text-xs text-muted pr-2">{t.trueKO}</td>
+                <td className="text-xs text-muted pr-2" title={t.trueKOHint}>{t.trueKO}</td>
                 {r.koTrue.map((p, i) => <td key={i} className={'text-right font-semibold ' + koColor(p)}>{pct(p)}</td>)}
               </tr>
               <tr className="text-muted">
-                <td className="text-xs pr-2">{t.rollsOnlyKO}</td>
+                <td className="text-xs pr-2" title={t.rollsOnlyHint}>{t.rollsOnlyKO}</td>
                 {r.koRollsOnly.map((p, i) => <td key={i} className="text-right">{pct(p)}</td>)}
               </tr>
             </tbody>
@@ -193,15 +193,14 @@ function DamageGauge({ r, attacker, defender, field, preFlinch, lang }: { r: Mov
           {statusP > 0 && sc && <div className="bg-violet-400/80" style={{ width: `${statusP * 100}%` }} title={`${t.inflictLabel[sc.status]} ${p1(statusP)}%`} />}
           {critP > 0 && <div className="bg-amber-400/80" style={{ width: `${critP * 100}%` }} title={`${t.critShort} ${p1(critP)}%`} />}
         </div>
-        <span className="max-w-[45%] shrink-0 text-right tabular-nums">
-          {flinchedP > 0 && <span className="text-yellow-300">{p1(flinchedP)}% {t.preFlinch} · </span>}
-          {ca.reason && cantP > 0 && <span className="text-slate-300">{t.attackerSelf} {p1(cantP)}% {t.cantAct[ca.reason]} · </span>}
-          {ca.reason === 'slp' && <span className="text-slate-300">{p1(1 - ca.chance)}% {t.wakes} · </span>}
-          {ca.reason === 'frz' && <span className="text-sky-300">{p1(1 - ca.chance)}% {t.thaws} · </span>}
-          {missP > 0 && <span className="text-orange-300">{p1(missP)}% {t.missed} · </span>}
-          {statusP > 0 && sc && <span className="text-violet-300">{p1(statusP)}% {t.inflictLabel[sc.status]} · </span>}
-          <span className="text-amber-300">{p1(critP)}% {t.critShort}</span>
-        </span>
+      </div>
+      <div className="ml-16 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] tabular-nums">
+        {flinchedP > 0 && <span className="text-yellow-300">{p1(flinchedP)} % {t.preFlinch}</span>}
+        {ca.reason && cantP > 0 && <span className="text-slate-300">{p1(cantP)} % {t.cantAct[ca.reason]}{ca.reason === 'slp' ? ` (${t.wakes} ${p1(1 - ca.chance)} %)` : ca.reason === 'frz' ? ` (${t.thaws} ${p1(1 - ca.chance)} %)` : ''}</span>}
+        {missP > 0 && <span className="text-orange-300">{p1(missP)} % {t.missed}</span>}
+        <span className="text-emerald-300">{p1(normalP)} % {t.actsNormally}</span>
+        {statusP > 0 && sc && <span className="text-violet-300">{p1(statusP)} % {t.inflictLabel[sc.status]}</span>}
+        {critP > 0 && <span className="text-amber-300">{p1(critP)} % {t.critShort}</span>}
       </div>
     </div>
   )

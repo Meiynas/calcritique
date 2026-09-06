@@ -225,7 +225,7 @@ export function computeMove(
   fieldState: FieldState,
   options: CalcOptions,
   attackerSide: SideKey = 'left',
-  battle: { gameType?: 'Singles' | 'Doubles'; targetCount?: number } = {},
+  battle: { gameType?: 'Singles' | 'Doubles'; targetCount?: number; actChance?: number } = {},
 ): MoveResult | null {
   if (!moveName || !gen.moves.get(toID(moveName)) || !attackerState.species || !defenderState.species) return null
   if (!gen.species.get(toID(attackerState.species)) || !gen.species.get(toID(defenderState.species))) return null
@@ -269,7 +269,8 @@ export function computeMove(
   }
 
   const acc = effectiveAccuracy(moveName, attacker, defender, field, attackerState.accStage ?? 0, defenderState.evaStage ?? 0)
-  const hitP = options.useAccuracy ? acc.effective / 100 : 1
+  // Chance que l'attaque parte ET touche : (chance d'agir : apeuré, paralysie totale, sommeil, gel) x précision
+  const hitP = (options.useAccuracy ? acc.effective / 100 : 1) * (battle.actChance ?? 1)
   const distOneWithMiss: Dist = hitP >= 1 ? distOne : mix(uniform([0]), 1 - hitP, distOne, hitP)
 
   const koRollsOnly: number[] = []
