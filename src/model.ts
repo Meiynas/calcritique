@@ -33,6 +33,8 @@ export interface PokemonState {
   leechSeed: boolean
   /** Index, dans l'équipe adverse, du Pokémon qui a posé la Vampigraine (null = premier adversaire vivant) */
   leechSeeder: number | null
+  /** Confus (1 chance sur 3 de se blesser au lieu d'agir) */
+  confused: boolean
   /** Cible de l'attaque mise en avant (2v2) : emplacement dans l'équipe adverse, ou allié ('ally'). null = cible par défaut */
   target: number | 'ally' | null
 }
@@ -112,6 +114,7 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     activeMove: 0,
     leechSeed: false,
     leechSeeder: null,
+    confused: false,
     target: null,
     ...overrides,
   }

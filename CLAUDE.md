@@ -303,6 +303,12 @@ Ajouté en v1.13.0 (6 septembre 2026) : format Showdown.
 - Bibliothèque : onglet "Texte Showdown" avec zone de texte, "Exporter l'équipe 1 / 2 en texte", "Copier", "Importer dans l'équipe 1 / 2" (un seul Pokémon = dans l'emplacement sélectionné ; plusieurs = remplace la colonne, les emplacements restants gardent leurs Pokémon), "Ajouter à la bibliothèque (sets)". Bouton 📋 sur chaque set enregistré pour copier son texte.
 - Zone Magique : effet fixe (anneaux bleus et halo), plus d'animation de rotation.
 
+Ajouté en v1.14.0 (6 septembre 2026) : Provoc, confusion, Farceur, Distorsion en cours de tour.
+- Distorsion : déjà dynamique quand elle est active sur le terrain (ordre recalculé après chaque action) ; l'attaque Distorsion jouée dans le tour l'active / la désactive pour la suite (effet "Distorsion posée").
+- Provoc : la cible marquée ne peut plus utiliser d'attaque de statut ("sous Provoc : attaque de statut bloquée" si elle joue après). Bloquée par Abri, Benêt, Aroma-Voile, Corps en Or, Anti-Air sur attaque prioritaire.
+- Farceur (Prankster) contre un type Ténèbres : toute attaque de statut visant un adversaire Ténèbres échoue ("Farceur contre un type Ténèbres : échoue"), en plus de l'immunité déjà gérée pour les statuts infligés.
+- Confusion : case "💫 Confus" à côté de "Victime de Vampigraine" (champ confused, volatile, remis à faux dans la bibliothèque). 1 chance sur 3 de se blesser (40 BP physique sans type sur sa propre Défense, boosts compris, roll médian) : meilleur scénario = l'adversaire se blesse, pire = nous, moyen = agit. Attaques qui rendent confus (CONFUSION_MOVES : Onde Folie, Vantardise, Flatterie, Ultrason, Doux Baiser, Danse-Folle à leur précision ; Dynamo-Poing 100 %, Vent Violent 30 %, Rafale Psy / Choc Mental 10 %, Uppercut / Vibraqua / Escalade 20 %, Vapeur Féérique 20 %, Hache Cassante 30 %) avec immunités (Tempo Perso, Terrain Brumeux au sol, Écran Poudre / Cape Cachée, Farceur vs Ténèbres, Corps en Or). La jauge "Chances" combine confusion et statut (reason 'confusion'). 18 tests.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -318,6 +324,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.14.0 : Provoc, confusion (case Confus + attaques qui confusent), Farceur contre Ténèbres, Distorsion posée en cours de tour.
 - 2026-09-06 : v1.13.4 : fenêtre "Choisir un Pokémon" : filtre par talents requis, avec des groupes OU comme pour les attaques (talents possibles d'après PokéAPI, talent imposé pour les Méga).
 - 2026-09-06 : v1.13.3 : matrice et conseils : les attaques à puissance variable (Balayage...) n'étaient pas candidates hors kit (filtre puissance > 0 sur des données à 0) ; filtre retiré.
 - 2026-09-06 : v1.13.2 : talent des Méga imposé partout (engine.megaAbility / effectiveAbility, model.normalizePokemon appliqué au chargement, à l'import Showdown, à la bibliothèque et au set automatique ; talent verrouillé dans la fiche). Cause du bug "Annule Garde ignoré dans la matrice" : Méga-Roucarnage gardait le talent de Roucarnage. 17 tests.

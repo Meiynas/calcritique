@@ -345,6 +345,9 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         <label className="flex items-center gap-1 pb-2 text-xs text-muted">
           <input type="checkbox" checked={value.leechSeed} onChange={(e) => set('leechSeed', e.target.checked)} />🌱 {t.leechSeedVictim}
         </label>
+        <label className="flex items-center gap-1 pb-2 text-xs text-muted">
+          <input type="checkbox" checked={value.confused} onChange={(e) => set('confused', e.target.checked)} />💫 {t.confused}
+        </label>
       </div>
       <SeederBoxes seeder={seeder} lang={lang} />
 
@@ -409,6 +412,7 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
           {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
         </select>
         <label className="flex items-center gap-1"><input type="checkbox" checked={value.leechSeed} onChange={(e) => onChange({ ...value, leechSeed: e.target.checked })} />🌱 {t.leechSeedVictim}</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={value.confused} onChange={(e) => onChange({ ...value, confused: e.target.checked })} />💫 {t.confused}</label>
       </div>
       <SeederBoxes seeder={seeder} lang={lang} />
       {slot !== null && (

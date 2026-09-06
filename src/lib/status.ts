@@ -57,17 +57,54 @@ export const FULL_PARALYSIS = 0.125
 export const WAKE_CHANCE = 1 / 3
 export const THAW_CHANCE = 0.25
 
-export type CantActReason = 'par' | 'slp' | 'frz'
+export type CantActReason = 'par' | 'slp' | 'frz' | 'confusion'
+export const CONFUSION_SELF_HIT = 1 / 3
+/** Attaques qui rendent confus : chance en % (attaques de statut = leur précision) */
+export const CONFUSION_MOVES: Record<string, number> = {
+  'Confuse Ray': 100, 'Swagger': 85, 'Flatter': 100, 'Supersonic': 55, 'Sweet Kiss': 75, 'Teeter Dance': 100,
+  'Dynamic Punch': 100, 'Hurricane': 30, 'Psybeam': 10, 'Confusion': 10, 'Dizzy Punch': 20, 'Signal Beam': 10, 'Water Pulse': 20, 'Rock Climb': 20, 'Chatter': 100, 'Strange Steam': 20, 'Axe Kick': 30,
+}
 
 /** Probabilité que le Pokémon n'agisse pas à cause de son statut, et la raison. */
 export function cantActChance(p: PokemonState, move: string): { chance: number; reason: CantActReason | null } {
-  if (p.status === 'par') return { chance: FULL_PARALYSIS, reason: 'par' }
-  if (p.status === 'slp') return { chance: 1 - WAKE_CHANCE, reason: 'slp' }
-  if (p.status === 'frz') {
-    if (SELF_THAW_MOVES.includes(move)) return { chance: 0, reason: 'frz' }
-    return { chance: 1 - THAW_CHANCE, reason: 'frz' }
+  let chance = 0
+  let reason: CantActReason | null = null
+  if (p.status === 'par') { chance = FULL_PARALYSIS; reason = 'par' }
+  else if (p.status === 'slp') { chance = 1 - WAKE_CHANCE; reason = 'slp' }
+  else if (p.status === 'frz') { chance = SELF_THAW_MOVES.includes(move) ? 0 : 1 - THAW_CHANCE; reason = 'frz' }
+  // Confusion : vérifiée après le statut, 1 chance sur 3 de se frapper soi-même
+  if (p.confused) {
+    const combined = 1 - (1 - chance) * (1 - CONFUSION_SELF_HIT)
+    if (!reason || CONFUSION_SELF_HIT * (1 - chance) > chance) reason = 'confusion'
+    chance = combined
   }
-  return { chance: 0, reason: null }
+  return { chance, reason }
+}
+
+/** La cible peut-elle être rendue confuse par cette attaque ? */
+export function canConfuse(move: string, attacker: PokemonState, target: PokemonState, field: FieldState): boolean {
+  if (target.confused) return false
+  if (target.ability === 'Own Tempo') return false
+  const info = moveInfo(move)
+  const isStatusMove = !info || info.category === 'Status'
+  const types = typesOf(target)
+  const grounded = !types.includes('Flying') && target.ability !== 'Levitate' && target.item !== 'Air Balloon'
+  if (field.terrain === 'Misty' && grounded) return false
+  if (isStatusMove) {
+    if (target.ability === 'Good as Gold') return false
+    if (attacker.ability === 'Prankster' && types.includes('Dark')) return false
+  } else if (secondaryBlocked(attacker, target, false)) return false
+  return true
+}
+
+/** Chance (0..1) de rendre la cible confuse (précision pour une attaque de statut, effet secondaire sinon) */
+export function confusionChance(move: string, attacker: PokemonState, target: PokemonState, field: FieldState): number {
+  const base = CONFUSION_MOVES[move]
+  if (!base || !canConfuse(move, attacker, target, field)) return 0
+  const info = moveInfo(move)
+  const isStatusMove = !info || info.category === 'Status'
+  if (isStatusMove) return (attacker.ability === 'No Guard' || target.ability === 'No Guard' ? 100 : base) / 100
+  return Math.min(100, attacker.ability === 'Serene Grace' ? base * 2 : base) / 100
 }
 
 function secondaryBlocked(attacker: PokemonState, target: PokemonState, guaranteed: boolean): boolean {

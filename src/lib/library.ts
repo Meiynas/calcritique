@@ -39,6 +39,7 @@ function fixPokemon(p: unknown): PokemonState {
   out.protect = false
   out.leechSeed = false
   out.leechSeeder = null
+  out.confused = false
   return normalizePokemon(out)
 }
 

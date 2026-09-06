@@ -8,8 +8,9 @@ import type { AppState, FieldState, PokemonState, SideKey } from '../model'
 import { otherSide, SWITCH_IN } from '../model'
 import { switchIn as applySwitchIn } from './switch'
 import { endOfTurnFor, intimidateEffect, lifeOrbLoss, selfChangesAfterHit, sitrusHeal, TERRAIN_ABILITIES, WEATHER_ABILITIES, type EndEffect, type SelfChange } from './residual'
-import { buildPokemon, computeMove, effectiveSpeed, moveInfo, movePriority, PROTECT_MOVES, type MoveResult } from './engine'
-import { cantActChance, flinchChance, SELF_THAW_MOVES, statusChance, STATUS_MOVES as STATUS_TABLE, thawsTarget, type InflictedStatus } from './status'
+import { buildPokemon, computeMove, effectiveSpeed, finalStats, moveInfo, movePriority, PROTECT_MOVES, type MoveResult } from './engine'
+const BOOST_MULT = [2 / 8, 2 / 7, 2 / 6, 2 / 5, 2 / 4, 2 / 3, 1, 3 / 2, 4 / 2, 5 / 2, 6 / 2, 7 / 2, 8 / 2]
+import { cantActChance, CONFUSION_MOVES, confusionChance, flinchChance, SELF_THAW_MOVES, statusChance, STATUS_MOVES as STATUS_TABLE, thawsTarget, typesOf, type InflictedStatus } from './status'
 
 export interface Slot { side: SideKey; index: number }
 export const slotKey = (s: Slot) => `${s.side}:${s.index}`
@@ -59,6 +60,8 @@ export interface Hit {
   flinched?: boolean
   /** La cible est dégelée par cette frappe */
   thawed?: boolean
+  /** La cible devient confuse */
+  confused?: boolean
   /** Baie Sitrus de la cible consommée après la frappe : PV rendus */
   sitrus?: number
   /** Aléas de cette frappe (0..1) : raté, critique, apeurer la cible (si elle joue après), statut infligé */
@@ -70,9 +73,11 @@ export interface ScenarioAction {
   action: Action
   /** Position réelle dans ce scénario (1 = premier) */
   position: number
-  skipped: 'fainted' | 'flinch' | 'par' | 'slp' | 'frz' | null
+  skipped: 'fainted' | 'flinch' | 'par' | 'slp' | 'frz' | 'confusion' | 'taunt' | 'prankster' | null
+  /** Dégâts que le Pokémon s'inflige (confusion) */
+  selfHit?: number
   /** Effet spécial de l'action (clé de traduction) */
-  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'sleep' | 'burn' | 'statusFail' | 'switchIn'
+  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'sleep' | 'burn' | 'statusFail' | 'switchIn' | 'taunt' | 'confuse' | 'trickRoom'
   hits: Hit[]
   /** Notes d'entrée sur le terrain (pièges, talents) : clé de traduction + valeur + nom de cible éventuel */
   notes?: { key: string; value?: number; target?: Slot }[]
@@ -201,6 +206,7 @@ export function simulateTurn(state: AppState): TurnResult {
     }
     const helping: Record<string, boolean> = {} // clé d'emplacement -> Coup d'Main reçu ce tour
     const flinched: Record<string, boolean> = {} // clé d'emplacement -> apeuré ce tour
+    const taunted: Record<string, boolean> = {} // clé d'emplacement -> sous Provoc
     const sitrusUsed: Record<string, boolean> = {} // Baie Sitrus consommée
     const trySitrus = (k: string): number => {
       const cur = hp[k]
@@ -267,14 +273,36 @@ export function simulateTurn(state: AppState): TurnResult {
       }
       // Tressaillement (flinch) subi plus tôt dans le tour
       if (flinched[ak]) { done.push({ action, position, skipped: 'flinch', hits: [] }); continue }
+      // Provoc subie plus tôt dans le tour : les attaques de statut sont bloquées
+      if (taunted[ak] && action.isStatus && action.move) { done.push({ action, position, skipped: 'taunt', hits: [] }); continue }
       // Statut qui empêche d'agir : selon le scénario, l'issue favorable à l'équipe 1 est retenue
       const ca = cantActChance(mons[ak], action.move)
       if (ca.reason) {
         const favorable = kind === 'best' ? ours : kind === 'worst' ? !ours : null
         const skip = ca.chance >= 1 || (ca.chance > 0 && (favorable === false || (favorable === null && ca.chance > 0.5)))
-        if (skip) { done.push({ action, position, skipped: ca.reason, hits: [] }); continue }
-        // Il agit : réveil / dégel (la paralysie reste)
-        if (ca.reason !== 'par') mons[ak] = { ...mons[ak], status: '' }
+        if (skip) {
+          // Confusion : il se blesse lui-même (40 BP, physique, sans type, sur sa propre Défense, roll médian)
+          let selfHit: number | undefined
+          if (ca.reason === 'confusion' || (mons[ak].confused && ca.reason !== 'slp' && ca.reason !== 'frz')) {
+            const st = finalStats(mons[ak])
+            const boostA = BOOST_MULT[Math.max(-6, Math.min(6, mons[ak].boosts.atk ?? 0)) + 6]
+            const boostD = BOOST_MULT[Math.max(-6, Math.min(6, mons[ak].boosts.def ?? 0)) + 6]
+            const base = Math.floor(Math.floor(Math.floor((2 * 50) / 5 + 2) * 40 * Math.floor(st.atk * boostA) / Math.floor(st.def * boostD)) / 50) + 2
+            selfHit = Math.max(1, Math.floor(base * 0.92))
+            const cur = hp[ak]
+            const nh = Math.max(0, cur.hp - selfHit)
+            hp[ak] = { hp: nh, maxHP: cur.maxHP, fainted: nh <= 0 }
+          }
+          done.push({ action, position, skipped: ca.reason, hits: [], selfHit })
+          continue
+        }
+        // Il agit : réveil / dégel (la paralysie et la confusion restent)
+        if (ca.reason !== 'par' && ca.reason !== 'confusion' && mons[ak].status !== 'par') mons[ak] = { ...mons[ak], status: '' }
+      }
+      // Prankster contre un type Ténèbres : l'attaque de statut échoue
+      if (action.isStatus && action.move && mons[ak].ability === 'Prankster') {
+        const foeTarget = action.targets.find((tg) => tg.side !== side)
+        if (foeTarget && typesOf(mons[slotKey(foeTarget)]).includes('Dark')) { done.push({ action, position, skipped: 'prankster', hits: [] }); continue }
       }
       if (mons[ak].status === 'frz' && SELF_THAW_MOVES.includes(action.move)) mons[ak] = { ...mons[ak], status: '' }
       let effect: ScenarioAction['effect']
@@ -290,6 +318,29 @@ export function simulateTurn(state: AppState): TurnResult {
         effect = 'helpingHand'
       }
       if (FIRST_TURN_ONLY.includes(action.move)) effect = 'firstTurnOnly'
+      if (action.move === 'Trick Room') { field.trickRoom = !field.trickRoom; effect = 'trickRoom' }
+      // Provoc : la cible ne pourra plus utiliser d'attaque de statut (ce tour si elle joue après, et les suivants)
+      if (action.move === 'Taunt') {
+        const target = action.targets.find((tg) => !hp[slotKey(tg)]?.fainted)
+        if (target) {
+          const tk = slotKey(target)
+          const tp = mons[tk]
+          const blocked = tp.protect || ['Oblivious', 'Aroma Veil', 'Good as Gold'].includes(tp.ability) || (target.side !== side && action.priority > 0 && guard[target.side].quick)
+          if (!blocked) { taunted[tk] = true; effect = 'taunt' } else effect = 'statusFail'
+        }
+      }
+      // Attaques de statut qui rendent confus (Onde Folie, Vantardise...)
+      if (action.isStatus && action.move in CONFUSION_MOVES) {
+        const target = action.targets.find((tg) => !hp[slotKey(tg)]?.fainted)
+        if (target) {
+          const tk = slotKey(target)
+          const tp = mons[tk]
+          const blocked = target.side !== side && (tp.protect || (action.priority > 0 && guard[target.side].quick))
+          const favorable = kind === 'best' ? ours : kind === 'worst' ? !ours : null
+          const ch = blocked ? 0 : confusionChance(action.move, mons[ak], tp, field)
+          if (ch >= 1 || (ch > 0 && (favorable === true || (favorable === null && ch >= 0.5)))) { mons[tk] = { ...tp, confused: true }; effect = 'confuse' } else effect = 'statusFail'
+        }
+      }
 
       const hits: Hit[] = []
       // Attaque de statut qui inflige un statut (Cage Éclair, Spore, Feu Follet...)
@@ -361,11 +412,15 @@ export function simulateTurn(state: AppState): TurnResult {
           let inflicted: InflictedStatus | undefined
           let thawed = false
           let flinch = false
+          let confusedNow = false
           if (!pick.missed && !ko) {
             if (mons[tk].status === 'frz' && thawsTarget(action.move)) { mons[tk] = { ...mons[tk], status: '' }; thawed = true }
             // Effet secondaire de statut (Plaquage 30 % para, Ébullition 30 % brûlure, Nuzzle 100 %...)
             const sc = statusChance(action.move, attackerState, mons[tk], field)
             if (sc && applies(sc.chance)) { mons[tk] = { ...mons[tk], status: sc.status }; inflicted = sc.status }
+            // Confusion en effet secondaire (Dynamo-Poing 100 %, Vent Violent 30 %...)
+            const cc = action.move in CONFUSION_MOVES ? confusionChance(action.move, attackerState, mons[tk], field) : 0
+            if (cc > 0 && applies(cc)) { mons[tk] = { ...mons[tk], confused: true }; confusedNow = true }
             // Flinch : seulement si la cible n'a pas encore agi ce tour
             const pending = remaining.find((r) => slotKey(r.actor) === tk)
             if (pending && target.side !== side) {
@@ -374,7 +429,7 @@ export function simulateTurn(state: AppState): TurnResult {
               if (fc >= 1 || (fc > 0 && favorable === true)) { flinched[tk] = true; flinch = true }
             }
           }
-          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, inflicted, flinched: flinch, thawed })
+          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, inflicted, flinched: flinch, thawed, confused: confusedNow })
           hp[tk] = { hp: Math.max(0, after), maxHP: cur.maxHP, fainted: ko }
           if (!ko) { const sh = trySitrus(tk); if (sh > 0) sitrusHeals.push({ target, heal: sh }) }
           if (!pick.missed && dmg > 0) landed = true

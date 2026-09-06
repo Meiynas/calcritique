@@ -89,7 +89,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                     <td key={k} className="py-1.5 px-1.5">
                       {sa.position !== i + 1 && <span className="mr-1 rounded bg-violet-500/30 px-1 text-[10px] text-violet-200" title={t.reordered}>{sa.position}{lang === 'fr' ? 'e' : 'th'}</span>}
                       {sa.skipped === 'fainted' && <span className="text-muted italic">{t.skippedFainted}</span>}
-                      {sa.skipped && sa.skipped !== 'fainted' && <span className="text-yellow-300 italic">{t.skippedReason[sa.skipped]}</span>}
+                      {sa.skipped && sa.skipped !== 'fainted' && <span className="text-yellow-300 italic">{t.skippedReason[sa.skipped]}{sa.selfHit ? ` (−${sa.selfHit} PV)` : ''}</span>}
                       {!sa.skipped && sa.effect && <span className="text-emerald-300 italic">{t.effects[sa.effect]}</span>}
                       {!sa.skipped && !sa.effect && a.isStatus && <span className="text-muted italic">{t.statusMove}</span>}
                       {!sa.skipped && !a.isStatus && sa.hits.length === 0 && <span className="text-muted italic">{t.noTarget}</span>}
@@ -162,6 +162,7 @@ function HitLine({ hit, name, lang, rich }: { hit: Hit; name: string; lang: Lang
           {hit.inflicted && <span className="text-yellow-300">{hit.inflicted === 'par' ? '⚡' : hit.inflicted === 'slp' ? '💤' : '🔥'} {t.statusNames[hit.inflicted]}</span>}
           {hit.flinched && <span className="text-yellow-300">💫 {t.flinchedHit}</span>}
           {hit.thawed && <span className="text-sky-300">🔥 {t.thawedHit}</span>}
+          {hit.confused && <span className="text-yellow-300">💫 {t.confusedHit}</span>}
           {hit.sitrus && <span className="text-emerald-300">🍐 +{hit.sitrus}</span>}
           {rich && d && d.maxPct > d.minPct && <span className="tabular-nums text-muted">({Math.floor(d.minPct * 10) / 10} {t.toShort} {Math.floor(d.maxPct * 10) / 10} %)</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>

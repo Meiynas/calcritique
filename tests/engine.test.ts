@@ -285,3 +285,27 @@ test('Méga : le talent de la Méga est imposé (Méga-Roucarnage = Annule Garde
   const auto = mostPlayedSet('Pidgeot')
   if (auto.species === 'Pidgeot-Mega') assert.equal(auto.ability, 'No Guard')
 })
+
+test('tour : Provoc bloque une attaque de statut jouée après, Farceur échoue sur un type Ténèbres, confusion = se blesse dans le pire cas', async () => {
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { defaultState } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '2v2'
+  st.teams.left[0] = defaultPokemon('Whimsicott', { ability: 'Prankster', nature: 'Timid', sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ['Taunt', '', '', ''], target: 0 })
+  st.teams.left[1] = defaultPokemon('Garchomp', { confused: true, moves: ['Earthquake', '', '', ''] })
+  st.teams.right[0] = defaultPokemon('Toxapex', { moves: ['Toxic', '', '', ''] })
+  st.teams.right[1] = defaultPokemon('Kingambit', { moves: ['Swords Dance', '', '', ''] })
+  st.active = { left: [0, 1], right: [0, 1] }
+  const r = simulateTurn(st)
+  const avg = r.scenarios.average
+  assert.equal(avg.actions.find((a) => a.action.move === 'Taunt')!.effect, 'taunt')
+  assert.equal(avg.actions.find((a) => a.action.move === 'Toxic')!.skipped, 'taunt')
+  // Confusion : dans le pire scénario (pour nous), Carchacrok se blesse ; dans le moyen il agit
+  assert.equal(r.scenarios.worst.actions.find((a) => a.action.move === 'Earthquake')!.skipped, 'confusion')
+  assert.ok((r.scenarios.worst.actions.find((a) => a.action.move === 'Earthquake')!.selfHit ?? 0) > 0)
+  assert.equal(avg.actions.find((a) => a.action.move === 'Earthquake')!.skipped, null)
+  // Farceur contre Ténèbres : Provoc sur Scalpereur échoue
+  st.teams.left[0].target = 1
+  const r2 = simulateTurn(st)
+  assert.equal(r2.scenarios.average.actions.find((a) => a.action.move === 'Taunt')!.skipped, 'prankster')
+})
