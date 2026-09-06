@@ -157,6 +157,14 @@ Fait dans la V1 (étape 1 de la feuille de route) :
 - Barre de vitesse unique (gauche = avantage) avec Mouchoir Choix, Vent Arrière, paralysie, talents météo, Distorsion.
 - Tests automatiques (`npm test`, aussi lancés par GitHub avant chaque publication).
 
+Ajouté en v1.1.0 (demande de l'humain du 6 septembre 2026) :
+- Interface en trois colonnes : Équipe 1 à gauche (6 emplacements), calculs au centre, Équipe 2 à droite (6 emplacements). On clique sur une carte pour choisir le Pokémon actif de chaque équipe ; l'éditeur complet s'affiche sous les cartes. Le bouton central "Équipe 1 ⟶ Équipe 2" inverse le sens de l'attaque.
+- Effets visuels plein écran (src/components/FxLayer.tsx + section FX de src/index.css) : vignettage coloré selon le terrain (vert Herbu, jaune Électrique, rose Psychique, mauve Brumeux), pluie / neige / soleil / tempête de sable animés sur tout le site, teinte violette quadrillée pour Distorsion, assombrissement pour Gravité, rafales de Vent Arrière qui traversent l'écran de gauche à droite (équipe 1) ou de droite à gauche (équipe 2).
+- Les murs se voient sur la colonne de l'équipe qui les a : Protection = liseré rose, Mur Lumière = liseré doré, Voile Aurore = bordure arc-en-ciel animée.
+- Pièges affichés au-dessus de chaque équipe (ceux que cette équipe subit) : Piège de Roc oui / non, Picots 0 à 3, Pics Toxik 0 à 2, Toile Gluante oui / non. Pics Toxik et Toile Gluante sont pour l'instant purement visuels (pas d'effet sur les dégâts).
+- Les effets par côté (murs, Vent Arrière, Coup d'Main, Garde Amie) se règlent dans la colonne de l'équipe concernée ; le moteur les traduit en côté attaquant / défenseur selon le sens de l'attaque.
+- La sauvegarde locale est passée en version 2 (clé calcritique.state.v2) : les réglages de la V1 ne sont pas repris.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -172,3 +180,4 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.1.0 : interface en trois colonnes (équipe 1, calculs, équipe 2) et effets visuels plein écran (terrain, météo, murs, pièges, Vent Arrière), à la demande de l'humain. La bibliothèque de sets (étape 2) reste à faire.

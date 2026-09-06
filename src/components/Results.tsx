@@ -52,7 +52,7 @@ export default function Results({ results, attacker, defender, lang }: Props) {
         <span className="text-[11px] text-muted">{t.koExplain}</span>
       </div>
       {shown.length === 0 && <p className="text-sm text-muted">{t.resultsHint}</p>}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3">
       {shown.map((r) => (
         <article key={r.move} className="rounded-lg border border-border bg-surface-2 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">

@@ -1,6 +1,6 @@
 // Conditions de combat : météo, terrain, salles, et effets par côté (murs, pièges, Vent Arrière...).
 // Chaque condition active est rendue visuellement (couleur, icône) pour ne pas l'oublier.
-import type { CalcOptions, FieldState, Lang, SideState } from '../model'
+import type { CalcOptions, FieldState, Lang } from '../model'
 import { dict } from '../i18n'
 
 interface Props {
@@ -58,11 +58,6 @@ export default function FieldPanel({ value, onChange, options, onOptions, lang }
         <Toggle on={value.gravity} onClick={() => set('gravity', !value.gravity)} icon="⬇️" label={t.gravity} color="slate" />
         <Toggle on={value.magicRoom} onClick={() => set('magicRoom', !value.magicRoom)} icon="🚫" label={t.magicRoom} color="slate" />
         <Toggle on={value.wonderRoom} onClick={() => set('wonderRoom', !value.wonderRoom)} icon="🔀" label={t.wonderRoom} color="slate" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <SideBlock title={t.sideAttacker} value={value.attackerSide} onChange={(s) => set('attackerSide', s)} lang={lang} role="attacker" />
-        <SideBlock title={t.sideDefender} value={value.defenderSide} onChange={(s) => set('defenderSide', s)} lang={lang} role="defender" />
       </div>
 
       {/* Options de calcul */}
@@ -140,29 +135,3 @@ export function Toggle({ on, onClick, icon, label, color }: { on: boolean; onCli
   )
 }
 
-function SideBlock({ title, value, onChange, lang, role }: { title: string; value: SideState; onChange: (s: SideState) => void; lang: Lang; role: 'attacker' | 'defender' }) {
-  const t = dict(lang)
-  const set = <K extends keyof SideState>(k: K, v: SideState[K]) => onChange({ ...value, [k]: v })
-  const border = role === 'attacker' ? 'border-accent/40' : 'border-sky-400/40'
-  return (
-    <div className={'rounded-lg border p-2.5 ' + border}>
-      <div className={'text-xs font-semibold mb-2 ' + (role === 'attacker' ? 'text-accent' : 'text-sky-400')}>{title}</div>
-      <div className="flex flex-wrap gap-1.5">
-        <Toggle on={value.reflect} onClick={() => set('reflect', !value.reflect)} icon="🛡️" label={t.reflect} color="rose" />
-        <Toggle on={value.lightScreen} onClick={() => set('lightScreen', !value.lightScreen)} icon="✨" label={t.lightScreen} color="amber" />
-        <Toggle on={value.auroraVeil} onClick={() => set('auroraVeil', !value.auroraVeil)} icon="🌈" label={t.auroraVeil} color="cyan" />
-        <Toggle on={value.tailwind} onClick={() => set('tailwind', !value.tailwind)} icon="💨" label={t.tailwind} color="cyan" />
-        <Toggle on={value.helpingHand} onClick={() => set('helpingHand', !value.helpingHand)} icon="🤝" label={t.helpingHand} color="emerald" />
-        <Toggle on={value.friendGuard} onClick={() => set('friendGuard', !value.friendGuard)} icon="🫂" label={t.friendGuard} color="emerald" />
-        <Toggle on={value.stealthRock} onClick={() => set('stealthRock', !value.stealthRock)} icon="🪨" label={t.stealthRock} color="stone" />
-        <button
-          type="button"
-          onClick={() => set('spikes', (value.spikes + 1) % 4)}
-          className={'rounded-md border px-2 py-1 text-xs font-medium transition ' + (value.spikes ? TOGGLE_COLORS.stone + ' ring-1 ring-white/30' : 'border-border bg-surface-2 text-muted hover:text-text')}
-        >
-          <span className={value.spikes ? '' : 'opacity-40 grayscale'}>📌</span> {t.spikes}{value.spikes ? ` ×${value.spikes}` : ''}
-        </button>
-      </div>
-    </div>
-  )
-}

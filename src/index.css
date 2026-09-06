@@ -50,3 +50,147 @@ input[type="number"] {
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
 }
+
+/* ---------- FX plein écran ---------- */
+.fx-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+.fx-root > div {
+  position: absolute;
+  inset: 0;
+}
+.fx-vignette {
+  transition: box-shadow 0.6s ease;
+}
+
+/* Pluie : fines stries qui tombent */
+.fx-rain {
+  background-image:
+    repeating-linear-gradient(100deg, transparent 0 14px, rgba(147, 197, 253, 0.28) 14px 15px, transparent 15px 38px),
+    repeating-linear-gradient(100deg, transparent 0 23px, rgba(191, 219, 254, 0.18) 23px 24px, transparent 24px 61px);
+  background-size: 100% 220px, 100% 340px;
+  animation: fx-rain-fall 0.55s linear infinite;
+  opacity: 0.9;
+}
+@keyframes fx-rain-fall {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: -40px 220px, -60px 340px; }
+}
+
+/* Neige : flocons qui descendent lentement */
+.fx-snow {
+  background-image:
+    radial-gradient(3px 3px at 20px 30px, rgba(255,255,255,0.9) 50%, transparent 52%),
+    radial-gradient(2px 2px at 90px 120px, rgba(255,255,255,0.8) 50%, transparent 52%),
+    radial-gradient(3px 3px at 160px 60px, rgba(255,255,255,0.7) 50%, transparent 52%),
+    radial-gradient(2px 2px at 230px 170px, rgba(255,255,255,0.85) 50%, transparent 52%),
+    radial-gradient(2.5px 2.5px at 300px 90px, rgba(255,255,255,0.75) 50%, transparent 52%);
+  background-size: 340px 200px, 340px 200px, 340px 200px, 340px 200px, 340px 200px;
+  animation: fx-snow-fall 9s linear infinite;
+  box-shadow: inset 0 0 160px 20px rgba(186, 230, 253, 0.25);
+}
+@keyframes fx-snow-fall {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 30px 400px, -20px 400px, 40px 400px, -30px 400px, 10px 400px; }
+}
+
+/* Soleil : halo chaud et rayons tournants */
+.fx-sun {
+  background:
+    radial-gradient(circle at 85% -10%, rgba(253, 224, 71, 0.45), rgba(251, 146, 60, 0.15) 30%, transparent 60%),
+    conic-gradient(from 0deg at 85% -10%, transparent 0 8%, rgba(253, 224, 71, 0.10) 8% 11%, transparent 11% 25%, rgba(253, 224, 71, 0.08) 25% 28%, transparent 28% 45%, rgba(253, 224, 71, 0.10) 45% 48%, transparent 48%);
+  animation: fx-sun-pulse 6s ease-in-out infinite;
+  box-shadow: inset 0 0 200px 30px rgba(251, 191, 36, 0.18);
+}
+@keyframes fx-sun-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* Tempête de sable : grains qui filent horizontalement */
+.fx-sand {
+  background-image:
+    repeating-linear-gradient(8deg, transparent 0 40px, rgba(217, 168, 90, 0.16) 40px 41px, transparent 41px 90px),
+    repeating-linear-gradient(-6deg, transparent 0 60px, rgba(180, 130, 60, 0.12) 60px 62px, transparent 62px 130px);
+  background-size: 600px 100%, 900px 100%;
+  animation: fx-sand-blow 1.2s linear infinite;
+  box-shadow: inset 0 0 200px 30px rgba(180, 130, 60, 0.28);
+}
+@keyframes fx-sand-blow {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: -600px 0, -900px 0; }
+}
+
+/* Distorsion : teinte violette et grille qui ondule */
+.fx-trickroom {
+  background-image:
+    linear-gradient(rgba(167, 139, 250, 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.10) 1px, transparent 1px);
+  background-size: 48px 48px;
+  box-shadow: inset 0 0 180px 20px rgba(139, 92, 246, 0.25);
+  animation: fx-tr-drift 12s linear infinite;
+}
+@keyframes fx-tr-drift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 48px 48px, 48px 48px; }
+}
+
+/* Gravité : léger assombrissement en bas */
+.fx-gravity {
+  background: linear-gradient(to bottom, transparent 60%, rgba(0, 0, 0, 0.35));
+}
+
+/* Vent Arrière : rafales qui traversent l'écran */
+.fx-wind {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 70px, rgba(165, 243, 252, 0.0) 70px, rgba(165, 243, 252, 0.35) 71px, transparent 72px 160px);
+  background-size: 100% 100%;
+  mask-image: repeating-linear-gradient(90deg, transparent 0 120px, black 220px 420px, transparent 520px 700px);
+  -webkit-mask-image: repeating-linear-gradient(90deg, transparent 0 120px, black 220px 420px, transparent 520px 700px);
+  mask-size: 1400px 100%;
+  -webkit-mask-size: 1400px 100%;
+}
+.fx-wind-ltr { animation: fx-wind-ltr 1.6s linear infinite; }
+.fx-wind-rtl { animation: fx-wind-rtl 1.6s linear infinite; }
+@keyframes fx-wind-ltr {
+  from { mask-position: -1400px 0; -webkit-mask-position: -1400px 0; }
+  to { mask-position: 0 0; -webkit-mask-position: 0 0; }
+}
+@keyframes fx-wind-rtl {
+  from { mask-position: 0 0; -webkit-mask-position: 0 0; }
+  to { mask-position: -1400px 0; -webkit-mask-position: -1400px 0; }
+}
+
+/* Murs sur une colonne d'équipe */
+.side-reflect { box-shadow: inset 0 0 0 2px rgba(251, 113, 133, 0.7), inset 0 0 40px rgba(251, 113, 133, 0.25); }
+.side-lightscreen { box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.7), inset 0 0 40px rgba(251, 191, 36, 0.25); }
+.side-reflect.side-lightscreen { box-shadow: inset 0 0 0 2px rgba(251, 113, 133, 0.7), inset 0 0 0 5px rgba(251, 191, 36, 0.6), inset 0 0 50px rgba(251, 170, 100, 0.3); }
+.side-auroraveil {
+  position: relative;
+}
+.side-auroraveil::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(120deg, #f472b6, #a78bfa, #22d3ee, #4ade80, #facc15, #f472b6);
+  background-size: 300% 300%;
+  animation: fx-aurora 6s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+@keyframes fx-aurora {
+  from { background-position: 0% 50%; }
+  to { background-position: 300% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-root > div, .side-auroraveil::before { animation: none !important; }
+}

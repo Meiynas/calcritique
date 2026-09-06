@@ -3,7 +3,7 @@
 // le VRAI taux de KO (précision x rolls x critiques) sur 1 à N attaques.
 
 import { calculate, Field, Generations, Move, Pokemon, toID } from "@smogon/calc"
-import type { FieldState, PokemonState, SideState, CalcOptions, StatKey } from '../model'
+import type { FieldState, PokemonState, SideState, SideKey, CalcOptions, StatKey } from '../model'
 import { spToEvs, LEVEL } from './champions'
 import extraJson from '../data/extra.json'
 
@@ -63,11 +63,13 @@ function buildSide(s: SideState) {
     isTailwind: s.tailwind,
     isHelpingHand: s.helpingHand,
     isFriendGuard: s.friendGuard,
-    isProtected: s.protected,
   }
 }
 
-export function buildField(f: FieldState): Field {
+/** Construit le terrain du moteur ; attackerSide dit quelle équipe attaque. */
+export function buildField(f: FieldState, attackerSide: SideKey = 'left'): Field {
+  const atk = f[attackerSide]
+  const def = f[attackerSide === 'left' ? 'right' : 'left']
   return new Field({
     gameType: 'Doubles',
     weather: (f.weather || undefined) as never,
@@ -75,8 +77,8 @@ export function buildField(f: FieldState): Field {
     isGravity: f.gravity,
     isMagicRoom: f.magicRoom,
     isWonderRoom: f.wonderRoom,
-    attackerSide: buildSide(f.attackerSide),
-    defenderSide: buildSide(f.defenderSide),
+    attackerSide: buildSide(atk),
+    defenderSide: buildSide(def),
   })
 }
 
@@ -204,11 +206,13 @@ export function computeMove(
   defenderState: PokemonState,
   fieldState: FieldState,
   options: CalcOptions,
+  attackerSide: SideKey = 'left',
 ): MoveResult | null {
-  if (!moveName || !gen.moves.get(toID(moveName))) return null
+  if (!moveName || !gen.moves.get(toID(moveName)) || !attackerState.species || !defenderState.species) return null
+  if (!gen.species.get(toID(attackerState.species)) || !gen.species.get(toID(defenderState.species))) return null
   const attacker = buildPokemon(attackerState)
   const defender = buildPokemon(defenderState)
-  const field = buildField(fieldState)
+  const field = buildField(fieldState, attackerSide)
   const info = gen.moves.get(toID(moveName))!
 
   const run = (isCrit: boolean) => {
@@ -305,17 +309,19 @@ export function effectiveSpeed(p: Pokemon, state: PokemonState, side: SideState,
   return spe
 }
 
-export function speedInfo(a: PokemonState, d: PokemonState, f: FieldState): SpeedInfo {
+export function speedInfo(a: PokemonState, d: PokemonState, f: FieldState, attackerSide: SideKey = 'left'): SpeedInfo | null {
+  if (!a.species || !d.species || !gen.species.get(toID(a.species)) || !gen.species.get(toID(d.species))) return null
   const pa = buildPokemon(a)
   const pd = buildPokemon(d)
-  const sa = effectiveSpeed(pa, a, f.attackerSide, f)
-  const sd = effectiveSpeed(pd, d, f.defenderSide, f)
+  const sa = effectiveSpeed(pa, a, f[attackerSide], f)
+  const sd = effectiveSpeed(pd, d, f[attackerSide === 'left' ? 'right' : 'left'], f)
   let winner: -1 | 0 | 1 = sa === sd ? 0 : sa > sd ? 1 : -1
   if (f.trickRoom && winner !== 0) winner = winner === 1 ? -1 : 1
   return { attacker: sa, defender: sd, winner, ratio: sd === 0 ? 99 : sa / sd }
 }
 
 export function finalStats(p: PokemonState): Record<StatKey, number> {
+  if (!p.species || !gen.species.get(toID(p.species))) return { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
   const mon = buildPokemon(p)
   return { ...mon.rawStats }
 }

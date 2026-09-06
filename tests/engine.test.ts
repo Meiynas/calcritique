@@ -59,9 +59,9 @@ test('critique : mode "toujours" fait plus de dégâts que "jamais"', () => {
 test('vitesse : Vent Arrière et Distorsion inversent le verdict', () => {
   const a = defaultPokemon('Kingambit', { sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } })
   const d = defaultPokemon('Rillaboom', { sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } })
-  assert.equal(speedInfo(a, d, field).winner, -1)
-  assert.equal(speedInfo(a, d, { ...field, attackerSide: { ...field.attackerSide, tailwind: true } }).winner, 1)
-  assert.equal(speedInfo(a, d, { ...field, trickRoom: true }).winner, 1)
+  assert.equal(speedInfo(a, d, field)!.winner, -1)
+  assert.equal(speedInfo(a, d, { ...field, left: { ...field.left, tailwind: true } })!.winner, 1)
+  assert.equal(speedInfo(a, d, { ...field, trickRoom: true })!.winner, 1)
 })
 
 test('doubles : une attaque à cibles multiples fait x0,75', () => {

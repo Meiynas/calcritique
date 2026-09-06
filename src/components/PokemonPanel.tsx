@@ -14,13 +14,14 @@ interface Props {
   role: 'attacker' | 'defender'
   value: PokemonState
   onChange: (p: PokemonState) => void
+  onClear?: () => void
   lang: Lang
 }
 
 const NATURE_KEYS = Object.keys(NAMES.natures)
 const STATUSES: StatusKey[] = ['', 'brn', 'par', 'psn', 'tox', 'slp', 'frz']
 
-export default function PokemonPanel({ title, role, value, onChange, lang }: Props) {
+export default function PokemonPanel({ title, role, value, onChange, onClear, lang }: Props) {
   const t = dict(lang)
   const species = speciesInfo(value.species)
   const stats = useMemo(() => finalStats(value), [value])
@@ -55,6 +56,10 @@ export default function PokemonPanel({ title, role, value, onChange, lang }: Pro
     <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className={'text-sm font-semibold uppercase tracking-wide ' + accent}>{title}</h2>
+        <div className="flex items-center gap-2">
+        {onClear && value.species && (
+          <button type="button" onClick={onClear} className="rounded border border-border px-1.5 py-0.5 text-[11px] text-muted hover:text-text">{t.clearSlot}</button>
+        )}
         {species && (
           <div className="flex gap-1">
             {species.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} />)}
@@ -62,6 +67,7 @@ export default function PokemonPanel({ title, role, value, onChange, lang }: Pro
             {value.teraType && <TypeBadge type={value.teraType} lang={lang} tera />}
           </div>
         )}
+        </div>
       </div>
 
       <SearchSelect kind="species" value={value.species} onChange={changeSpecies} lang={lang} placeholder={t.searchPokemon} keys={SPECIES_KEYS} />
