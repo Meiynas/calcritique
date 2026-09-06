@@ -100,7 +100,7 @@ export function guaranteedOHKOMoves(atk: PokemonState, def: PokemonState, field:
   for (const m of learnset(atk.species)) {
     if (m === exclude) continue
     const info = moveInfo(m)
-    if (!info || info.category === 'Status' || info.basePower <= 0) continue
+    if (!info || info.category === 'Status') continue // puissance variable (Balayage...) = 0 dans les données, on garde
     // Attaques inutilisables telles quelles (charge, contrecoup KO, dégâts fixes...) : on garde, l'utilisateur juge
     const r = damageRange(m, atk, def, field, side, battle)
     if (!r || r.min < r.curHP) continue

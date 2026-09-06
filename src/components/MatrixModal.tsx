@@ -28,7 +28,8 @@ function bestCell(atk: PokemonState, def: PokemonState, state: AppState, side: S
   if (includeAll) {
     // Tout le learnset : présélection rapide (fourchette de dégâts) des 6 attaques qui frappent le plus fort, puis calcul complet
     const ranked = learnset(atk.species)
-      .filter((m) => { const i = moveInfo(m); return i && i.category !== 'Status' && i.basePower > 0 && !(noTwoTurn && TWO_TURN_MOVES.has(m)) })
+      // Pas de filtre sur la puissance de base : Balayage, Nœud Herbe, Tacle Lourd... ont 0 dans les données (puissance variable)
+      .filter((m) => { const i = moveInfo(m); return i && i.category !== 'Status' && !(noTwoTurn && TWO_TURN_MOVES.has(m)) })
       .map((m) => ({ m, r: damageRange(m, atk, def, state.field, side, battle) }))
       .filter((x) => x.r && x.r.max > 0)
       .sort((a, b) => b.r!.min - a.r!.min || b.r!.max - a.r!.max)
