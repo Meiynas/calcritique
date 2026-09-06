@@ -138,8 +138,18 @@ Codes d'équipe Champions (codes à 10 caractères, "Replica Teams") :
 - Calculateurs concurrents observés (pour s'inspirer, pas pour copier) : Porygon Labs (speed tiers, explorateur de stats, sets curatés), VGC Multi Calc (multi-cibles, application installable), OP.GG Champions (interface en 20 langues dont le français, presets de stats), NCP VGC Calc (sets nommés, équipes).
 - Règles Champions constatées lors de la recherche du 5 septembre 2026 : niveau 50, IV 31, 66 SP au total et 32 max par stat, Doubles, 6 Pokémon dont 4 choisis, listes d'équipe ouvertes, Téra et Méga présents mais un seul gimmick par combat, pas de Dynamax ni de capacités Z, régulation M-B (Méga officielles, sans légendaires de boîte ni Paradoxe). À revérifier régulièrement.
 
+## 9 bis. État technique du dépôt (mis à jour à chaque étape)
+
+- Dépôt GitHub : https://github.com/Meiynas/calcritique (public). Le dossier local E:\Fichiers\Bureau\Cal EST le dépôt (dossier .git dedans).
+- Étape 0 réalisée le 6 septembre 2026 : squelette Vite + React + TypeScript + Tailwind 4, enveloppe Tauri 2 (src-tauri), plugin de mise à jour automatique (clé publique dans tauri.conf.json, clés dans le dossier secrets/ ignoré par Git et dans les secrets GitHub TAURI_SIGNING_PRIVATE_KEY / TAURI_SIGNING_PRIVATE_KEY_PASSWORD), workflow release.yml (installeur Windows NSIS sur étiquette vX.Y.Z) et workflow pages.yml (version site sur GitHub Pages, construite avec `npm run build:web`).
+- Aucun outil de construction n'est installé sur le PC de l'humain : les installeurs sont fabriqués par GitHub Actions. Le développement se fait dans l'espace de travail Claude, les fichiers sont copiés dans le dossier Cal, puis envoyés sur GitHub avec Git depuis la machine de l'humain (GitHub CLI authentifié).
+- Pour tester rapidement une interface sans installer : la version site https://meiynas.github.io/calcritique/ se met à jour à chaque envoi sur main.
+- Publier une version : voir README.md (changer la version, poser l'étiquette, pousser).
+- Le mode de construction "web" (base /calcritique/) sert à GitHub Pages ; le mode par défaut (base /) sert au logiciel.
+
 ## 10. Journal des décisions
 
 - 2026-09-05 : création du projet et de ce fichier. Périmètre : Champions uniquement. Aucune décision technique définitive encore prise.
 - 2026-09-05 : nom choisi : Calcritique. Style graphique : celui de coupcritique.fr. Une seule barre de vitesse (gauche = avantage, droite = désavantage). Validé : calcul inversé, compteur SP, déroulé de tour avec scénarios meilleur / moyen / pire, presets depuis une API de stats d'usage, import par codes d'équipe (dans la limite du possible).
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
+- 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
