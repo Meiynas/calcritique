@@ -5,7 +5,9 @@
 // baisses de Vitesse (Vent Glacé, Toile Élek...) avec ordre recalculé après chaque action (vitesse dynamique).
 // Trois scénarios du point de vue de l'équipe 1 (gauche) : meilleur, moyen, pire.
 import type { AppState, FieldState, PokemonState, SideKey } from '../model'
-import { otherSide } from '../model'
+import { otherSide, SWITCH_IN } from '../model'
+import { switchIn as applySwitchIn } from './switch'
+import { endOfTurnFor, intimidateEffect, lifeOrbLoss, selfChangesAfterHit, sitrusHeal, TERRAIN_ABILITIES, WEATHER_ABILITIES, type EndEffect, type SelfChange } from './residual'
 import { buildPokemon, computeMove, effectiveSpeed, moveInfo, movePriority, PROTECT_MOVES, type MoveResult } from './engine'
 import { cantActChance, flinchChance, SELF_THAW_MOVES, statusChance, STATUS_MOVES as STATUS_TABLE, thawsTarget, type InflictedStatus } from './status'
 
@@ -32,6 +34,8 @@ export interface Action {
   speed: number
   /** Égalité de vitesse avec l'action suivante (ordre aléatoire dans le jeu) */
   tieWithNext: boolean
+  /** "Arrivée sur le terrain" : pièges d'entrée et talents d'entrée au lieu d'une attaque */
+  switchIn: boolean
 }
 
 export type ScenarioKind = 'best' | 'average' | 'worst'
@@ -55,6 +59,8 @@ export interface Hit {
   flinched?: boolean
   /** La cible est dégelée par cette frappe */
   thawed?: boolean
+  /** Baie Sitrus de la cible consommée après la frappe : PV rendus */
+  sitrus?: number
   detail: MoveResult | null
 }
 
@@ -64,14 +70,20 @@ export interface ScenarioAction {
   position: number
   skipped: 'fainted' | 'flinch' | 'par' | 'slp' | 'frz' | null
   /** Effet spécial de l'action (clé de traduction) */
-  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'sleep' | 'burn' | 'statusFail'
+  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'sleep' | 'burn' | 'statusFail' | 'switchIn'
   hits: Hit[]
+  /** Notes d'entrée sur le terrain (pièges, talents) : clé de traduction + valeur + nom de cible éventuel */
+  notes?: { key: string; value?: number; target?: Slot }[]
+  /** Variations de PV du lanceur (drain, contrecoup, Orbe Vie, Baie Sitrus) */
+  self?: SelfChange[]
 }
 
 export interface Scenario {
   kind: ScenarioKind
   actions: ScenarioAction[]
   hp: Record<string, { hp: number; maxHP: number; fainted: boolean }>
+  /** Effets de fin de tour appliqués (poison, brûlure, sable, Restes...) */
+  endOfTurn: EndEffect[]
 }
 
 export interface TurnResult {
@@ -114,17 +126,19 @@ function baseActions(state: AppState): Action[] {
   for (const side of ['left', 'right'] as SideKey[]) {
     for (const slot of activeSlots(state, side)) {
       const p = state.teams[side][slot.index]
-      const move = p.moves[p.activeMove ?? 0] ?? ''
+      const isSwitch = p.activeMove === SWITCH_IN
+      const move = isSwitch ? '' : (p.moves[p.activeMove ?? 0] ?? '')
       const info = move ? moveInfo(move) : undefined
-      let priority = movePriority(p, move, p.curHPPercent >= 100)
+      let priority = isSwitch ? 100 : movePriority(p, move, p.curHPPercent >= 100)
       if (state.field.terrain === 'Grassy' && move === 'Grassy Glide') priority += 1
-      const { targets, spread } = targetsFor(state, slot, move)
+      const { targets, spread } = isSwitch ? { targets: [], spread: false } : targetsFor(state, slot, move)
       actions.push({
         actor: slot, pokemon: p, move, targets, spread,
         isStatus: !info || info.category === 'Status' || !info.category,
         priority,
         speed: effectiveSpeed(buildPokemon(p), p, state.field[side], state.field),
         tieWithNext: false,
+        switchIn: isSwitch,
       })
     }
   }
@@ -184,7 +198,15 @@ export function simulateTurn(state: AppState): TurnResult {
       right: { wide: false, quick: false, redirect: null },
     }
     const helping: Record<string, boolean> = {} // clé d'emplacement -> Coup d'Main reçu ce tour
-    const flinched: Record<string, boolean> = {} // clé d'emplacement -> tressaille ce tour
+    const flinched: Record<string, boolean> = {} // clé d'emplacement -> apeuré ce tour
+    const sitrusUsed: Record<string, boolean> = {} // Baie Sitrus consommée
+    const trySitrus = (k: string): number => {
+      const cur = hp[k]
+      if (!cur || cur.fainted) return 0
+      const heal = sitrusHeal(mons[k], cur.hp, cur.maxHP, !!sitrusUsed[k])
+      if (heal > 0) { sitrusUsed[k] = true; hp[k] = { ...cur, hp: Math.min(cur.maxHP, cur.hp + heal) } }
+      return heal
+    }
     for (const side of ['left', 'right'] as SideKey[]) {
       for (const slot of activeSlots(state, side)) {
         const p = state.teams[side][slot.index]
@@ -210,6 +232,37 @@ export function simulateTurn(state: AppState): TurnResult {
       const side = action.actor.side
       const foe = otherSide(side)
       const ours = side === 'left'
+      // Arrivée sur le terrain : pièges d'entrée puis talents d'entrée (météo, terrain, Intimidation)
+      if (action.switchIn) {
+        const notes: NonNullable<ScenarioAction['notes']> = []
+        const cur = hp[ak]
+        const before = { ...mons[ak], curHPPercent: (cur.hp / cur.maxHP) * 100 }
+        const r = applySwitchIn(before, field[side], field)
+        field[side] = r.side
+        const newHP = Math.max(0, Math.min(cur.hp, Math.round((cur.maxHP * r.pokemon.curHPPercent) / 100)))
+        const dead = r.notes.some((n) => n.key === 'switch.fainted')
+        hp[ak] = { hp: dead ? 0 : newHP, maxHP: cur.maxHP, fainted: dead }
+        mons[ak] = r.pokemon
+        for (const n of r.notes) notes.push({ key: n.key.replace('switch.', ''), value: n.value })
+        if (!dead) {
+          const ab = mons[ak].ability
+          if (WEATHER_ABILITIES[ab]) { field.weather = WEATHER_ABILITIES[ab]; notes.push({ key: 'weather' }) }
+          if (TERRAIN_ABILITIES[ab]) { field.terrain = TERRAIN_ABILITIES[ab]; notes.push({ key: 'terrain' }) }
+          if (ab === 'Intimidate') {
+            for (const tg of activeSlots(state, foe)) {
+              const tk = slotKey(tg)
+              if (hp[tk]?.fainted) continue
+              const eff = intimidateEffect(mons[tk])
+              const boosts = { ...mons[tk].boosts }
+              for (const c of eff.changes) boosts[c.stat] = Math.max(-6, Math.min(6, (boosts[c.stat] ?? 0) + c.delta))
+              mons[tk] = { ...mons[tk], boosts }
+              notes.push({ key: eff.note, target: tg })
+            }
+          }
+        }
+        done.push({ action, position, skipped: dead ? 'fainted' : null, effect: 'switchIn', hits: [], notes })
+        continue
+      }
       // Tressaillement (flinch) subi plus tôt dans le tour
       if (flinched[ak]) { done.push({ action, position, skipped: 'flinch', hits: [] }); continue }
       // Statut qui empêche d'agir : selon le scénario, l'issue favorable à l'équipe 1 est retenue
@@ -253,6 +306,9 @@ export function simulateTurn(state: AppState): TurnResult {
           } else effect = 'statusFail'
         }
       }
+      const self: SelfChange[] = []
+      const sitrusHeals: { target: Slot; heal: number }[] = []
+      let landed = false
       if (!action.isStatus) {
         const info = moveInfo(action.move)
         // Redirection : attaque mono-cible visant l'ennemi -> Par Ici / Poudre Fureur
@@ -311,6 +367,9 @@ export function simulateTurn(state: AppState): TurnResult {
           }
           hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, inflicted, flinched: flinch, thawed })
           hp[tk] = { hp: Math.max(0, after), maxHP: cur.maxHP, fainted: ko }
+          if (!ko) { const sh = trySitrus(tk); if (sh > 0) sitrusHeals.push({ target, heal: sh }) }
+          if (!pick.missed && dmg > 0) landed = true
+          for (const sc2 of selfChangesAfterHit(action.move, attackerState, mons[tk], dmg, hp[ak].maxHP)) self.push(sc2)
           // Baisse de Vitesse garantie : l'ordre sera recalculé pour les actions suivantes
           if (!pick.missed && !ko && SPEED_DROP_MOVES.includes(action.move)) {
             const tp = mons[tk]
@@ -318,9 +377,43 @@ export function simulateTurn(state: AppState): TurnResult {
           }
         }
       }
-      done.push({ action, position, skipped: null, effect, hits })
+      // Orbe Vie, puis application des variations de PV du lanceur (drain, contrecoup), puis Baie Sitrus
+      if (landed) { const lo = lifeOrbLoss(mons[ak], action.move, hp[ak].maxHP); if (lo) self.push(lo) }
+      for (const sc2 of self) {
+        const cur = hp[ak]
+        const nh = Math.max(0, Math.min(cur.maxHP, cur.hp + sc2.delta))
+        hp[ak] = { hp: nh, maxHP: cur.maxHP, fainted: nh <= 0 }
+      }
+      if (!hp[ak].fainted) { const sh = trySitrus(ak); if (sh > 0) self.push({ reason: 'sitrus', delta: sh }) }
+      for (const h of hits) { const sh = sitrusHeals.find((x) => slotKey(x.target) === slotKey(h.target)); if (sh) h.sitrus = sh.heal }
+      done.push({ action, position, skipped: null, effect, hits, self: self.length ? self : undefined })
     }
-    scenarios[kind] = { kind, actions: done, hp }
+    // Fin de tour : météo, terrain, objets, statuts, Vampigraine (dans l'ordre de Vitesse)
+    const endOfTurn: EndEffect[] = []
+    const order2 = sortActions(baseActions(state), field.trickRoom, speedOf)
+    for (const a of order2) {
+      const k = slotKey(a.actor)
+      const cur = hp[k]
+      if (!cur || cur.fainted) continue
+      for (const e of endOfTurnFor(mons[k], cur.hp, cur.maxHP, field)) {
+        const c = hp[k]
+        const nh = Math.max(0, Math.min(c.maxHP, c.hp + e.delta))
+        hp[k] = { hp: nh, maxHP: c.maxHP, fainted: nh <= 0 }
+        endOfTurn.push({ slot: a.actor, reason: e.reason, delta: nh - c.hp })
+        if (e.reason === 'leechSeed') {
+          const rcv = activeSlots(state, otherSide(a.actor.side)).find((tg) => !hp[slotKey(tg)]?.fainted)
+          if (rcv) {
+            const rk = slotKey(rcv)
+            const rc = hp[rk]
+            const gain = mons[rk].ability === 'Liquid Ooze' ? 0 : Math.min(rc.maxHP - rc.hp, -e.delta)
+            if (gain > 0) { hp[rk] = { ...rc, hp: rc.hp + gain }; endOfTurn.push({ slot: rcv, reason: 'leechSeedHeal', delta: gain }) }
+          }
+        }
+        if (hp[k].fainted) break
+      }
+      if (!hp[k].fainted) { const sh = trySitrus(k); if (sh > 0) endOfTurn.push({ slot: a.actor, reason: 'sitrus', delta: sh }) }
+    }
+    scenarios[kind] = { kind, actions: done, hp, endOfTurn }
   }
   return { order, scenarios }
 }

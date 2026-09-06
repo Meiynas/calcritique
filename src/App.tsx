@@ -5,6 +5,8 @@ import { dict } from './i18n'
 import { computeMove } from './lib/engine'
 import { mostPlayedSet } from './lib/usage'
 import { simulateTurn } from './lib/turn'
+import { switchIn } from './lib/switch'
+import { flinchChance, cantActChance } from './lib/status'
 import { label } from './lib/names'
 import TeamColumn from './components/TeamColumn'
 import FieldPanel from './components/FieldPanel'
@@ -35,12 +37,29 @@ export default function App() {
   // Détail par attaque : chaque Pokémon en jeu contre chacune de ses cibles (PV réels)
   const details = useMemo(
     () =>
-      turn.order.flatMap((a) =>
-        a.targets.map((tg) => {
+      turn.order.flatMap((a) => {
+        // Chance d'être apeuré avant d'agir : attaques adverses jouées avant (scénario moyen) qui visent ce Pokémon
+        const avg = turn.scenarios.average.actions
+        const myPos = avg.find((x) => x.action.actor.side === a.actor.side && x.action.actor.index === a.actor.index)?.position ?? 0
+        let notFlinched = 1
+        for (const x of avg) {
+          const b = x.action
+          if (b.actor.side === a.actor.side || b.isStatus || b.switchIn || x.position >= myPos) continue
+          if (!b.targets.some((tg) => tg.side === a.actor.side && tg.index === a.actor.index)) continue
+          let fc = flinchChance(b.move, b.pokemon, a.pokemon)
+          if (b.move === 'Upper Hand' && a.priority <= 0) fc = 0
+          if (fc <= 0) continue
+          const r = computeMove(b.move, b.pokemon, a.pokemon, state.field, state.options, b.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: b.targets.length })
+          const acc = r && r.accuracy.base !== null ? r.accuracy.effective / 100 : 1
+          const act = 1 - cantActChance(b.pokemon, b.move).chance
+          notFlinched *= 1 - act * acc * fc
+        }
+        const preFlinch = 1 - notFlinched
+        return a.targets.map((tg) => {
           const defender = state.teams[tg.side][tg.index]
-          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length }) }
-        }),
-      ),
+          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, preFlinch, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length }) }
+        })
+      }),
     [turn, state],
   )
 
@@ -68,11 +87,20 @@ export default function App() {
         maxActive={activeCount(state.mode)}
         onSelect={(i) => setState((s) => ({ ...s, selected: { ...s.selected, [side]: i } }))}
         onSetActive={(pos, i) =>
-          setState((s) => ({
-            ...s,
-            selected: { ...s.selected, [side]: i },
-            active: { ...s.active, [side]: setActiveSlot(s.active[side], pos, i, activeCount(s.mode)) },
-          }))
+          setState((s) => {
+            const active = setActiveSlot(s.active[side], pos, i, activeCount(s.mode))
+            let teams = s.teams
+            let field = s.field
+            // Mode pièges : le Pokémon qui entre en A / B subit les pièges d'entrée de son côté
+            if (s.hazardMode && !s.active[side].includes(i) && s.teams[side][i]?.species) {
+              const r = switchIn(s.teams[side][i], s.field[side], s.field)
+              const team = [...s.teams[side]]
+              team[i] = r.pokemon
+              teams = { ...s.teams, [side]: team }
+              field = { ...s.field, [side]: r.side }
+            }
+            return { ...s, teams, field, selected: { ...s.selected, [side]: i }, active: { ...s.active, [side]: active } }
+          })
         }
         onChangeTeam={(team) => setState((s) => ({ ...s, teams: { ...s.teams, [side]: team } }))}
         sideState={state.field[side]}
@@ -130,6 +158,10 @@ export default function App() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm" title={t.modeTitle}>
               <span className="text-xs text-muted">{t.modeTitle}</span>
+              <label className="ml-2 flex items-center gap-1 text-xs text-muted" title={t.hazardModeHint}>
+                <input type="checkbox" checked={state.hazardMode} onChange={(e) => setState((s) => ({ ...s, hazardMode: e.target.checked }))} />
+                {t.hazardMode}
+              </label>
               <div className="flex overflow-hidden rounded border border-border">
                 {(['1v1', '2v2'] as const).map((m) => (
                   <button
@@ -156,7 +188,7 @@ export default function App() {
                         <span className={d.actor.side === 'left' ? 'text-accent' : 'text-sky-400'}>{label('species', d.attacker.species, state.lang)}</span> {t.vs}{' '}
                         <span className={d.target.side === 'left' ? 'text-accent' : 'text-sky-400'}>{label('species', d.defender.species, state.lang)}</span>
                       </div>
-                      <Results results={[d.result]} attacker={d.attacker} defender={d.defender} field={state.field} lang={state.lang} activeMove={0} compact />
+                      <Results results={[d.result]} attacker={d.attacker} defender={d.defender} field={state.field} preFlinch={d.preFlinch} lang={state.lang} activeMove={0} compact />
                     </div>
                   ) : null,
                 )}

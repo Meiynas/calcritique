@@ -26,7 +26,9 @@ export interface PokemonState {
   evaStage: number // stade d'esquive, -6 à +6
   critStage: number // bonus de coup critique (0 à 3), ex : Focus Energy = +2
   protect: boolean // utilise Abri ce tour (pour Ruse, Poing Invisible...)
-  activeMove: number // attaque mise en avant dans les résultats (0 à 3)
+  activeMove: number // attaque mise en avant dans les résultats (0 à 3) ; SWITCH_IN (-1) = "arrivée sur le terrain"
+  /** Sous Vampigraine (perd 1/8 PV en fin de tour au profit de l'adversaire) */
+  leechSeed: boolean
   /** Cible de l'attaque mise en avant (2v2) : emplacement dans l'équipe adverse, ou allié ('ally'). null = cible par défaut */
   target: number | 'ally' | null
 }
@@ -73,7 +75,12 @@ export interface AppState {
   active: Record<SideKey, number[]> // Pokémon sur le terrain (1 en 1v1, 2 en 2v2), dans l'ordre d'entrée
   field: FieldState
   options: CalcOptions
+  /** Mode pièges d'entrée : appliquer automatiquement les pièges à chaque Pokémon placé en A / B */
+  hazardMode: boolean
 }
+
+/** Valeur d'activeMove qui signifie "arrivée sur le terrain" (pièges + talents d'entrée) au lieu d'une attaque */
+export const SWITCH_IN = -1
 
 export function activeCount(mode: BattleMode): number {
   return mode === '2v2' ? 2 : 1
@@ -98,6 +105,7 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     critStage: 0,
     protect: false,
     activeMove: 0,
+    leechSeed: false,
     target: null,
     ...overrides,
   }
@@ -155,6 +163,7 @@ export function defaultState(build: SetBuilder = (sp) => defaultPokemon(sp)): Ap
     active: { left: [0, 1], right: [0, 1] },
     field: defaultField(),
     options: { critMode: 'chance', useAccuracy: true, maxTurns: 4 },
+    hazardMode: false,
   }
 }
 
@@ -214,6 +223,7 @@ export function loadState(build?: SetBuilder): AppState {
         right: { ...base.field.right, ...parsed.field?.right },
       },
       options: { ...base.options, ...parsed.options },
+      hazardMode: !!parsed.hazardMode,
     }
   } catch {
     return defaultState(build)

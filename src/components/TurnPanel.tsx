@@ -44,9 +44,9 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                 <span className="font-bold text-muted">{i + 1}.</span>
                 <span className={'font-semibold ' + sideColor(a.actor)}>{name(a.actor)}</span>
                 {info && <TypeBadge type={info.type} lang={lang} small />}
-                <span>{a.move ? label('moves', a.move, lang) : '·'}</span>
+                <span>{a.switchIn ? t.switchInAction : a.move ? label('moves', a.move, lang) : '·'}</span>
                 {a.targets.length > 0 && !a.isStatus && <span className="text-muted">→ {a.spread ? t.allTargets : name(a.targets[0])}</span>}
-                {a.priority !== 0 && <span className="text-violet-300">{a.priority > 0 ? '+' + a.priority : a.priority}</span>}
+                {a.priority !== 0 && !a.switchIn && <span className="text-violet-300">{a.priority > 0 ? '+' + a.priority : a.priority}</span>}
                 <span className="tabular-nums text-muted">{a.speed}</span>
               </span>
               {i < turn.order.length - 1 && <span className="text-muted">{a.tieWithNext ? '≈' : '→'}</span>}
@@ -69,7 +69,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
               <tr key={slotKey(a.actor)} className="border-t border-border/60 align-top">
                 <td className="py-1.5 pr-1.5">
                   <div className={'font-semibold ' + sideColor(a.actor)}>{i + 1}. {name(a.actor)}</div>
-                  <div className="text-muted">{a.move ? label('moves', a.move, lang) : '·'}{a.spread ? ` · ${t.spreadShort}` : ''}</div>
+                  <div className="text-muted">{a.switchIn ? t.switchInAction : a.move ? label('moves', a.move, lang) : '·'}{a.spread ? ` · ${t.spreadShort}` : ''}</div>
                 </td>
                 {KINDS.map((k) => {
                   const sa = turn.scenarios[k].actions.find((x) => slotKey(x.action.actor) === slotKey(a.actor))!
@@ -81,12 +81,42 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                       {!sa.skipped && sa.effect && <span className="text-emerald-300 italic">{t.effects[sa.effect]}</span>}
                       {!sa.skipped && !sa.effect && a.isStatus && <span className="text-muted italic">{t.statusMove}</span>}
                       {!sa.skipped && !a.isStatus && sa.hits.length === 0 && <span className="text-muted italic">{t.noTarget}</span>}
+                      {sa.notes && sa.notes.length > 0 && (
+                        <div className="text-[11px] text-muted">
+                          {sa.notes.map((n, j) => {
+                            const v = (t.entryNotes as Record<string, string | ((n: number) => string)>)[n.key]
+                            const txt = typeof v === 'function' ? v(n.value ?? 0) : v ?? n.key
+                            return <div key={j}>{n.target ? <span className={sideColor(n.target)}>{name(n.target)} : </span> : null}{txt}</div>
+                          })}
+                        </div>
+                      )}
                       {sa.hits.map((h) => <HitLine key={slotKey(h.target)} hit={h} name={name(h.target)} lang={lang} />)}
+                      {sa.self && sa.self.length > 0 && (
+                        <div className="flex flex-wrap gap-x-2 text-[11px]">
+                          {sa.self.map((c, j) => <span key={j} className={c.delta > 0 ? 'text-emerald-300' : 'text-orange-300'}>{name(a.actor)} {c.delta > 0 ? '+' : ''}{c.delta} PV ({t.selfReason[c.reason]})</span>)}
+                        </div>
+                      )}
                     </td>
                   )
                 })}
               </tr>
             ))}
+            {KINDS.some((k) => turn.scenarios[k].endOfTurn.length > 0) && (
+              <tr className="border-t border-border/60 align-top">
+                <td className="py-1.5 pr-1.5 font-semibold text-muted">{t.endOfTurnEffects}</td>
+                {KINDS.map((k) => (
+                  <td key={k} className="py-1.5 px-1.5 text-[11px]">
+                    {turn.scenarios[k].endOfTurn.map((e, j) => (
+                      <div key={j} className="flex gap-1">
+                        <span className={sideColor(e.slot)}>{name(e.slot)}</span>
+                        <span className={e.delta > 0 ? 'text-emerald-300' : 'text-orange-300'}>{e.delta > 0 ? '+' : ''}{e.delta} PV</span>
+                        <span className="text-muted">({t.endReason[e.reason]})</span>
+                      </div>
+                    ))}
+                  </td>
+                ))}
+              </tr>
+            )}
             <tr className="border-t border-border">
               <td className="py-2 pr-2 font-semibold uppercase text-[11px] text-muted">{t.endOfTurn}</td>
               {KINDS.map((k) => <td key={k} className="py-2 px-2"><EndState scenario={turn.scenarios[k]} state={state} lang={lang} /></td>)}
@@ -116,6 +146,7 @@ function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
           {hit.inflicted && <span className="text-yellow-300">{hit.inflicted === 'par' ? '⚡' : hit.inflicted === 'slp' ? '💤' : '🔥'} {t.statusNames[hit.inflicted]}</span>}
           {hit.flinched && <span className="text-yellow-300">💫 {t.flinchedHit}</span>}
           {hit.thawed && <span className="text-sky-300">🔥 {t.thawedHit}</span>}
+          {hit.sitrus && <span className="text-emerald-300">🍐 +{hit.sitrus}</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>
           {hit.ko && <span className="font-bold text-accent">KO</span>}
         </>

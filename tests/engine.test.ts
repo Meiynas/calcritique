@@ -216,3 +216,44 @@ test('tour : Bluff fait tressaillir la cible (elle n\'agit pas), un Pokémon gel
   assert.equal(r2.scenarios.best.actions.find((a) => a.action.move === 'Extreme Speed')!.skipped, 'frz')
   assert.equal(r2.scenarios.worst.actions.find((a) => a.action.move === 'Extreme Speed')!.skipped, null)
 })
+
+test('tour : arrivée sur le terrain (Piège de Roc + Intimidation), contrecoup de Boutefeu, fin de tour (brûlure, sable, Restes), Baie Sitrus', async () => {
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { defaultState, SWITCH_IN } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '2v2'
+  st.field.weather = 'Sand'
+  st.field.left.stealthRock = true
+  st.teams.left[0] = defaultPokemon('Incineroar', { ability: 'Intimidate', activeMove: SWITCH_IN, item: 'Sitrus Berry' })
+  st.teams.left[1] = defaultPokemon('Arcanine', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, status: 'brn', moves: ['Flare Blitz', '', '', ''], target: 0 })
+  st.teams.right[0] = defaultPokemon('Garchomp', { item: 'Leftovers', moves: ['Protect', '', '', ''] })
+  st.teams.right[1] = defaultPokemon('Kingambit', { ability: 'Defiant', moves: ['Protect', '', '', ''] })
+  st.active = { left: [0, 1], right: [0, 1] }
+  const r = simulateTurn(st)
+  const avg = r.scenarios.average
+  const entry = avg.actions.find((a) => a.action.switchIn)!
+  assert.equal(entry.position, 1) // avant toutes les attaques
+  assert.equal(entry.effect, 'switchIn')
+  assert.ok(entry.notes!.some((n) => n.key === 'rocks' && n.value! > 0)) // Piège de Roc sur un type Feu
+  assert.ok(entry.notes!.some((n) => n.key === 'intimidate' && n.target?.index === 0))
+  assert.ok(entry.notes!.some((n) => n.key === 'intimidateDefiant' && n.target?.index === 1))
+  // Boutefeu bloqué par Abri : pas de contrecoup ; sans Abri, contrecoup d'un tiers
+  const fb = avg.actions.find((a) => a.action.move === 'Flare Blitz')!
+  assert.ok(!fb.self || !fb.self.some((c) => c.reason === 'recoil'))
+  st.teams.right[0].moves[0] = 'Earthquake'
+  const r2 = simulateTurn(st)
+  const fb2 = r2.scenarios.average.actions.find((a) => a.action.move === 'Flare Blitz')!
+  const recoil = fb2.self!.find((c) => c.reason === 'recoil')!
+  assert.equal(recoil.delta, -Math.floor(fb2.hits[0].damage / 3))
+  // Fin de tour : Arcanin brûlé et touché par le sable, Carchacrok immunisé au sable et soigné par les Restes
+  const eot = r2.scenarios.average.endOfTurn
+  assert.ok(eot.some((e) => e.slot.side === 'left' && e.slot.index === 1 && e.reason === 'burn' && e.delta < 0))
+  assert.ok(eot.some((e) => e.slot.side === 'left' && e.slot.index === 1 && e.reason === 'sand' && e.delta < 0))
+  assert.ok(eot.some((e) => e.slot.side === 'right' && e.slot.index === 0 && e.reason === 'leftovers' && e.delta > 0))
+  assert.ok(!eot.some((e) => e.slot.side === 'right' && e.slot.index === 0 && e.reason === 'sand'))
+  // Baie Sitrus de Félinferno : Séisme le fait passer sous 50 % dans le pire scénario -> soin
+  const worst = r2.scenarios.worst
+  const eq = worst.actions.find((a) => a.action.move === 'Earthquake')!
+  const onInc = eq.hits.find((h) => h.target.side === 'left' && h.target.index === 0)
+  if (onInc && !onInc.ko && onInc.hpAfter <= onInc.maxHP / 2) assert.ok(onInc.sitrus! > 0)
+})

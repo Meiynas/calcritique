@@ -1,7 +1,7 @@
 // Panneau d'un Pokémon : espèce, nature, SP, objet, talent, Téra, attaques, statut, PV, stades, Abri.
 import { useMemo, useState } from 'react'
 import type { Lang, PokemonState, StatKey, StatusKey } from '../model'
-import { STAT_KEYS } from '../model'
+import { STAT_KEYS, SWITCH_IN } from '../model'
 import { dict } from '../i18n'
 import { label, NAMES } from '../lib/names'
 import { EXTRA, TYPE_NAMES, finalStats, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
@@ -250,16 +250,29 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
             />
           ))}
         </div>
+        <button
+          type="button"
+          onClick={() => onChange({ ...value, activeMove: value.activeMove === SWITCH_IN ? 0 : SWITCH_IN })}
+          title={t.switchInHint}
+          className={'mt-1 flex w-full items-center gap-2 rounded-md border px-2 py-1 text-sm ' + (value.activeMove === SWITCH_IN ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-dashed border-border bg-surface-2 text-muted hover:border-muted')}
+        >
+          <span>🚪</span><span className="font-medium">{t.switchInAction}</span>
+        </button>
         {targetOptions && (
           <TargetChips value={value} options={targetOptions} onChange={(tg) => set('target', tg)} lang={lang} />
         )}
       </div>
 
-      <Field label={t.status}>
-        <select className="input" value={value.status} onChange={(e) => set('status', e.target.value as StatusKey)}>
-          {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
-        </select>
-      </Field>
+      <div className="flex items-end gap-3">
+        <Field label={t.status}>
+          <select className="input" value={value.status} onChange={(e) => set('status', e.target.value as StatusKey)}>
+            {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
+          </select>
+        </Field>
+        <label className="flex items-center gap-1 pb-2 text-xs text-muted">
+          <input type="checkbox" checked={value.leechSeed} onChange={(e) => set('leechSeed', e.target.checked)} />🌱 {t.leechSeed}
+        </label>
+      </div>
 
       {picker?.kind === 'move' && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(picker.slot, m); setPicker(null) }} onClose={() => setPicker(null)} />
@@ -306,12 +319,21 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
           />
         ))}
       </div>
+        <button
+          type="button"
+          onClick={() => onChange({ ...value, activeMove: value.activeMove === SWITCH_IN ? 0 : SWITCH_IN })}
+          title={t.switchInHint}
+          className={'mt-1 flex w-full items-center gap-2 rounded-md border px-2 py-1 text-sm ' + (value.activeMove === SWITCH_IN ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-dashed border-border bg-surface-2 text-muted hover:border-muted')}
+        >
+          <span>🚪</span><span className="font-medium">{t.switchInAction}</span>
+        </button>
       {targetOptions && <TargetChips value={value} options={targetOptions} onChange={(tg) => onChange({ ...value, target: tg })} lang={lang} />}
       <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
         <span>{t.status} :</span>
         <select className="rounded border border-border bg-surface-2 px-1 py-0.5 text-text" value={value.status} onChange={(e) => onChange({ ...value, status: e.target.value as StatusKey })}>
           {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
         </select>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={value.leechSeed} onChange={(e) => onChange({ ...value, leechSeed: e.target.checked })} />🌱 {t.leechSeed}</label>
       </div>
       {slot !== null && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(slot, m); setSlot(null) }} onClose={() => setSlot(null)} />
