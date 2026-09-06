@@ -9,7 +9,7 @@ Le brief complet du projet (objectifs, fonctionnalités, décisions) est dans `C
 
 ## Pour Claude : comment est organisé le projet
 
-- `src/` : l'interface (React + TypeScript + Tailwind). `src/updater.ts` gère la mise à jour automatique.
+- `src/` : l'interface (React + TypeScript + Tailwind). `src/lib/engine.ts` fait le lien avec le moteur de dégâts et calcule le vrai taux de KO ; `src/lib/names.ts` la recherche FR / EN ; `src/data/` les données générées par `scripts/`. `src/updater.ts` gère la mise à jour automatique.
 - `src-tauri/` : l'enveloppe "logiciel Windows" (Tauri 2). `tauri.conf.json` contient la clé publique des mises à jour et l'adresse où le logiciel cherche les nouvelles versions.
 - `.github/workflows/release.yml` : fabrique l'installeur Windows et le publie sur GitHub Releases quand on pousse une étiquette `vX.Y.Z`.
 - `.github/workflows/pages.yml` : publie la version site sur GitHub Pages à chaque changement sur `main`.
@@ -17,7 +17,8 @@ Le brief complet du projet (objectifs, fonctionnalités, décisions) est dans `C
 
 ## Publier une nouvelle version
 
-1. Changer le numéro de version dans `package.json` (et `src-tauri/Cargo.toml`).
+1. Changer le numéro de version dans `package.json` et `src-tauri/Cargo.toml`.
+1 bis. Lancer `npm test` (les tests du moteur doivent passer).
 2. Enregistrer les changements (`git commit`) puis poser l'étiquette : `git tag v0.2.0 && git push origin main --tags`.
 3. GitHub fabrique l'installeur (environ 10 minutes) et le publie dans Releases. Les logiciels déjà installés proposent la mise à jour au prochain lancement.
 

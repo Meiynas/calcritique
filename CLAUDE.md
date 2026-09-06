@@ -147,9 +147,28 @@ Codes d'équipe Champions (codes à 10 caractères, "Replica Teams") :
 - Publier une version : voir README.md (changer la version, poser l'étiquette, pousser).
 - Le mode de construction "web" (base /calcritique/) sert à GitHub Pages ; le mode par défaut (base /) sert au logiciel.
 
+## 9 ter. État fonctionnel (V1, 6 septembre 2026)
+
+Fait dans la V1 (étape 1 de la feuille de route) :
+- Un attaquant contre un défenseur, format Doubles. Recherche FR / EN tolérante (accents, tirets, majuscules) pour Pokémon, attaques, objets, talents ; natures et types traduits. Interface FR / EN (bouton en haut à droite), réglages sauvegardés dans le navigateur / le logiciel.
+- Règles Champions : niveau 50, IV 31, SP (0 à 32 par stat, compteur 66 avec alerte de dépassement), 1 SP = 8 EV en interne (équivalence exacte au niveau 50, vérifiée par test). Natures, objets, talents (les talents possibles de l'espèce sont proposés en premier), Téracristal, Méga (choisir la forme Méga comme espèce), boosts, statuts, PV actuels.
+- Conditions : météo, terrain, Distorsion, Gravité, Zone Magique, Zone Étrange ; par côté : Protection, Mur Lumière, Voile Aurore, Vent Arrière, Coup d'Main, Garde Amie, Piège de Roc, Picots. Boutons colorés avec icône, l'actif est bien visible.
+- Résultats par attaque : dégâts min / max en % et en PV, précision effective (avec ce qui la modifie), vrai taux de KO sur 1 à 4 attaques (précision x rolls x critiques, options réglables), taux "rolls seuls" à titre de comparaison, mini histogramme des 16 rolls.
+- Barre de vitesse unique (gauche = avantage) avec Mouchoir Choix, Vent Arrière, paralysie, talents météo, Distorsion.
+- Tests automatiques (`npm test`, aussi lancés par GitHub avant chaque publication).
+
+Limites connues à traiter plus tard :
+- Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
+- Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
+- Le taux de KO ne prend pas encore en compte les dégâts résiduels ni les soins (Baie Sitrus, Restes, sable, brûlure).
+- Les noms français de quelques formes récentes (nouvelles Méga) sont construits automatiquement ("Méga-" + nom) et les nouvelles pierres Méga restent en anglais.
+- Pas de sprites (les images seraient à embarquer pour rester hors ligne).
+- Les fichiers de données src/data/names.json et src/data/extra.json sont générés par scripts/build-names.py et scripts/build-extra.py à partir des CSV de PokéAPI (à relancer quand le moteur ou PokéAPI évoluent).
+
 ## 10. Journal des décisions
 
 - 2026-09-05 : création du projet et de ce fichier. Périmètre : Champions uniquement. Aucune décision technique définitive encore prise.
 - 2026-09-05 : nom choisi : Calcritique. Style graphique : celui de coupcritique.fr. Une seule barre de vitesse (gauche = avantage, droite = désavantage). Validé : calcul inversé, compteur SP, déroulé de tour avec scénarios meilleur / moyen / pire, presets depuis une API de stats d'usage, import par codes d'équipe (dans la limite du possible).
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
+- 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.

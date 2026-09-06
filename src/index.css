@@ -25,3 +25,28 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Champs de formulaire standard */
+.input {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+select.input option {
+  background: var(--color-surface);
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}

@@ -29,6 +29,7 @@ jobs:
           workspaces: src-tauri
 
       - run: npm ci
+      - run: npm test
 
       - uses: tauri-apps/tauri-action@v0
         env:
