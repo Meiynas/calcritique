@@ -19,16 +19,18 @@ interface Props {
   side: SideKey
   team: PokemonState[]
   selected: number
+  active: number[]
+  maxActive: number
   onSelect: (i: number) => void
   onChangeTeam: (team: PokemonState[]) => void
   sideState: SideState
   onChangeSide: (s: SideState) => void
-  isAttacker: boolean
   field: FieldState
   lang: Lang
+  targetOptions?: { value: number | 'ally'; label: string }[]
 }
 
-export default function TeamColumn({ side, team, selected, onSelect, onChangeTeam, sideState, onChangeSide, isAttacker, field, lang }: Props) {
+export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
@@ -50,8 +52,7 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
     onChangeTeam(next)
   }
   const wallClass = ['side-fx', sideState.reflect && 'side-reflect', sideState.lightScreen && 'side-lightscreen', sideState.auroraVeil && 'side-auroraveil', sideState.helpingHand && 'side-helpinghand', sideState.friendGuard && 'side-friendguard'].filter(Boolean).join(' ')
-  const roleColor = isAttacker ? 'text-accent' : 'text-sky-400'
-  const roleLabel = isAttacker ? t.attacker : t.defender
+  const roleColor = side === 'left' ? 'text-accent' : 'text-sky-400'
 
   return (
     <div className={'flex flex-col gap-3 rounded-2xl p-2 transition-shadow ' + wallClass}>
@@ -60,7 +61,7 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
 
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-bold uppercase tracking-wide">{side === 'left' ? t.team1 : t.team2}</h2>
-        <span className={'text-xs font-semibold uppercase ' + roleColor}>{roleLabel}</span>
+        <span className={'text-xs font-semibold uppercase ' + roleColor}>{t.onField} : {active.filter((i) => team[i]?.species).length} / {maxActive}</span>
       </div>
 
       {/* Effets du côté */}
@@ -80,13 +81,15 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
             key={i}
             mon={p}
             active={i === selected}
+            onField={active.includes(i)}
+            fieldPos={active.indexOf(i)}
             onClick={() => onSelect(i)}
             onDoubleClick={() => { onSelect(i); setPickSlot(i) }}
             onHP={(pct) => setMon(i, { ...p, curHPPercent: pct })}
             onSwitch={() => doSwitch(i)}
             toast={toast?.slot === i ? toast.lines : null}
             lang={lang}
-            isAttacker={isAttacker}
+            side={side}
           />
         ))}
       </div>
@@ -94,8 +97,9 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
       {/* Éditeur du Pokémon sélectionné */}
       <PokemonPanel
         title={`${side === 'left' ? t.team1 : t.team2} · ${t.slot} ${selected + 1}`}
-        role={isAttacker ? 'attacker' : 'defender'}
+        role={side === 'left' ? 'attacker' : 'defender'}
         value={team[selected]}
+        targetOptions={targetOptions}
         onChange={(p) => setMon(selected, p)}
         onClear={() => setMon(selected, emptyPokemon())}
         teamSpecies={team.map((p) => p.species)}
@@ -113,14 +117,15 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
   )
 }
 
-function MonCard({ mon, active, onClick, onDoubleClick, onHP, onSwitch, toast, lang, isAttacker }: {
-  mon: PokemonState; active: boolean; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; onSwitch: () => void; toast: string[] | null; lang: Lang; isAttacker: boolean
+function MonCard({ mon, active, onField, fieldPos, onClick, onDoubleClick, onHP, onSwitch, toast, lang, side }: {
+  mon: PokemonState; active: boolean; onField: boolean; fieldPos: number; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; onSwitch: () => void; toast: string[] | null; lang: Lang; side: SideKey
 }) {
   const t = dict(lang)
   const [editing, setEditing] = useState<null | 'hp' | 'pct'>(null)
   const [draft, setDraft] = useState('')
   const sp = speciesInfo(mon.species)
-  const ring = active ? (isAttacker ? 'border-accent ring-1 ring-accent/60' : 'border-sky-400 ring-1 ring-sky-400/60') : 'border-border hover:border-muted'
+  const activeRing = side === 'left' ? 'border-accent ring-1 ring-accent/60 ' : 'border-sky-400 ring-1 ring-sky-400/60 '
+  const ring = (active ? activeRing : 'border-border hover:border-muted ') + (onField ? 'bg-surface' : 'bg-surface/50 opacity-75')
   if (!mon.species || !sp) {
     return (
       <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={'rounded-lg border border-dashed bg-surface/60 px-2 py-2 text-left text-xs text-muted ' + ring}>
@@ -139,10 +144,13 @@ function MonCard({ mon, active, onClick, onDoubleClick, onHP, onSwitch, toast, l
       onDoubleClick={onDoubleClick}
       onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
       title={t.dblClickHint}
-      className={'cursor-pointer rounded-lg border bg-surface px-2 py-1.5 text-left ' + ring}
+      className={'cursor-pointer rounded-lg border px-2 py-1.5 text-left ' + ring}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className="truncate text-sm font-semibold">{label('species', mon.species, lang)}</span>
+        <span className="flex min-w-0 items-center gap-1">
+          {onField && <span className={'shrink-0 rounded px-1 text-[9px] font-bold uppercase text-white ' + (side === 'left' ? 'bg-accent' : 'bg-sky-500')} title={t.onField}>{fieldPos === 0 ? 'A' : 'B'}</span>}
+          <span className="truncate text-sm font-semibold">{label('species', mon.species, lang)}</span>
+        </span>
         <span className="flex items-center gap-0.5">
           {sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}
           <button

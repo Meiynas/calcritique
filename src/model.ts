@@ -27,6 +27,8 @@ export interface PokemonState {
   critStage: number // bonus de coup critique (0 à 3), ex : Focus Energy = +2
   protect: boolean // utilise Abri ce tour (pour Ruse, Poing Invisible...)
   activeMove: number // attaque mise en avant dans les résultats (0 à 3)
+  /** Cible de l'attaque mise en avant (2v2) : emplacement dans l'équipe adverse, ou allié ('ally'). null = cible par défaut */
+  target: number | 'ally' | null
 }
 
 /** Effets propres à un côté du terrain (une équipe). */
@@ -61,13 +63,20 @@ export interface CalcOptions {
   maxTurns: number // jusqu'à combien de coups on regarde (1 à 4)
 }
 
+export type BattleMode = '1v1' | '2v2'
+
 export interface AppState {
   lang: Lang
+  mode: BattleMode
   teams: Record<SideKey, PokemonState[]>
-  selected: Record<SideKey, number> // index du Pokémon actif de chaque équipe
-  attackerSide: SideKey // quelle équipe attaque (l'autre défend)
+  selected: Record<SideKey, number> // index du Pokémon en cours d'édition dans chaque équipe
+  active: Record<SideKey, number[]> // Pokémon sur le terrain (1 en 1v1, 2 en 2v2), dans l'ordre d'entrée
   field: FieldState
   options: CalcOptions
+}
+
+export function activeCount(mode: BattleMode): number {
+  return mode === '2v2' ? 2 : 1
 }
 
 export const zeroStats = (): Record<StatKey, number> => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 })
@@ -89,6 +98,7 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     critStage: 0,
     protect: false,
     activeMove: 0,
+    target: null,
     ...overrides,
   }
 }
@@ -139,9 +149,10 @@ function starterTeams(build: SetBuilder): Record<SideKey, PokemonState[]> {
 export function defaultState(build: SetBuilder = (sp) => defaultPokemon(sp)): AppState {
   return {
     lang: 'fr',
+    mode: '2v2',
     teams: starterTeams(build),
     selected: { left: 0, right: 0 },
-    attackerSide: 'left',
+    active: { left: [0, 1], right: [0, 1] },
     field: defaultField(),
     options: { critMode: 'chance', useAccuracy: true, maxTurns: 4 },
   }
@@ -151,14 +162,15 @@ export function otherSide(s: SideKey): SideKey {
   return s === 'left' ? 'right' : 'left'
 }
 
-/** Attaquant et défenseur actuels (peuvent être des emplacements vides). */
-export function activePair(state: AppState): { attacker: PokemonState; defender: PokemonState } {
-  const a = state.attackerSide
-  const d = otherSide(a)
-  return { attacker: state.teams[a][state.selected[a]], defender: state.teams[d][state.selected[d]] }
+/** Met un Pokémon sur le terrain : remplace le plus ancien si le terrain est plein. */
+export function putActive(active: number[], index: number, max: number): number[] {
+  if (active.includes(index)) return active
+  const next = [...active, index]
+  while (next.length > max) next.shift()
+  return next
 }
 
-const STORAGE_KEY = 'calcritique.state.v3'
+const STORAGE_KEY = 'calcritique.state.v4'
 
 function fixTeam(team: unknown): PokemonState[] {
   const arr = Array.isArray(team) ? (team as Partial<PokemonState>[]) : []
@@ -178,8 +190,12 @@ export function loadState(build?: SetBuilder): AppState {
     return {
       lang: parsed.lang === 'en' ? 'en' : 'fr',
       teams,
+      mode: parsed.mode === '1v1' ? '1v1' : '2v2',
       selected: { left: sel(parsed.selected?.left), right: sel(parsed.selected?.right) },
-      attackerSide: parsed.attackerSide === 'right' ? 'right' : 'left',
+      active: {
+        left: Array.isArray(parsed.active?.left) ? parsed.active!.left.filter((n) => typeof n === 'number' && n >= 0 && n < TEAM_SIZE).slice(-2) : [0],
+        right: Array.isArray(parsed.active?.right) ? parsed.active!.right.filter((n) => typeof n === 'number' && n >= 0 && n < TEAM_SIZE).slice(-2) : [0],
+      },
       field: {
         ...base.field,
         ...parsed.field,

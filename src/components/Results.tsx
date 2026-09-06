@@ -11,6 +11,7 @@ interface Props {
   defender: PokemonState
   lang: Lang
   activeMove: number
+  compact?: boolean
 }
 
 function pct(p: number): string {
@@ -42,21 +43,23 @@ function describe(p: PokemonState, lang: Lang, offensive: boolean, category: str
   return `${label('species', p.species, lang)} (${label('natures', p.nature, lang)}, ${parts.join(', ')})`
 }
 
-export default function Results({ results, attacker, defender, lang, activeMove }: Props) {
+export default function Results({ results, attacker, defender, lang, activeMove, compact }: Props) {
   const t = dict(lang)
   const indexed = results.map((r, i) => ({ r, i })).filter((x): x is { r: MoveResult; i: number } => !!x.r && x.r.category !== 'Status')
   const shown = [...indexed.filter((x) => x.i === activeMove), ...indexed.filter((x) => x.i !== activeMove)]
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{t.results}</h2>
-        <span className="text-[11px] text-muted">{t.koExplain}</span>
-      </div>
-      {shown.length === 0 && <p className="text-sm text-muted">{t.resultsHint}</p>}
+    <section className={compact ? '' : 'rounded-xl border border-border bg-surface p-4 flex flex-col gap-3'}>
+      {!compact && (
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{t.results}</h2>
+          <span className="text-[11px] text-muted">{t.koExplain}</span>
+        </div>
+      )}
+      {!compact && shown.length === 0 && <p className="text-sm text-muted">{t.resultsHint}</p>}
       <div className="grid gap-3">
       {shown.map(({ r, i }) => (
-        <article key={r.move} className={'rounded-lg border bg-surface-2 p-3 ' + (i === activeMove ? 'border-accent ring-1 ring-accent/50' : 'border-border')}>
+        <article key={r.move} className={'rounded-lg border bg-surface-2 p-3 ' + (!compact && i === activeMove ? 'border-accent ring-1 ring-accent/50' : 'border-border')}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <TypeBadge type={r.type} lang={lang} />

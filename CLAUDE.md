@@ -188,6 +188,13 @@ Ajouté en v1.2.2 :
 - Bouton ⇄ (Switch) sur chaque carte (src/lib/switch.ts) : applique les pièges du côté de l'équipe (Piège de Roc selon la faiblesse Roche, Picots 1/8, 1/6, 1/4 si au sol, Pics Toxik = poison ou poison grave si au sol et non Poison / Acier, un type Poison au sol retire les Pics Toxik, Toile Gluante = Vitesse −1 si au sol, bloquée par Corps Sain et similaires), Grosses Bottes et Garde Magik gérés, remise à zéro des boosts et des stades, Abri décoché. Un petit message vert résume ce qui s'est passé pendant 4 secondes.
 - Le bouton Abri n'affiche plus "(via l'attaque)".
 
+Ajouté en v1.3.0 (demande du 6 septembre 2026 : plus d'équipe "attaquante" / "défenseuse") :
+- Format de combat 1v1 ou 2v2 (VGC) au centre. Chaque équipe a 1 ou 2 Pokémon "en jeu" (badges A / B sur les cartes ; cliquer une carte la met en jeu en remplaçant la plus ancienne). Les deux camps attaquent et défendent en même temps.
+- Déroulé du tour (src/lib/turn.ts, src/components/TurnPanel.tsx) : les 2 ou 4 actions dans l'ordre réel (priorité, puis Vitesse avec Distorsion / Vent Arrière / Mouchoir Choix / paralysie ; "≈" signale une égalité de vitesse). Chaque Pokémon utilise son attaque mise en avant, avec sa cible (sélecteur "Cible" en 2v2 : adversaire A / B, allié, ou automatique = premier adversaire ; les attaques à cibles multiples touchent tout le monde avec x0,75). Un Pokémon KO n'agit plus, Abri bloque, les attaques de statut sont listées sans dégâts.
+- Trois scénarios du point de vue de l'équipe 1 : meilleur (mes coups touchent, roll max, critique ; l'adversaire rate si sa précision est inférieure à 100, sinon roll min), moyen (roll médian, pas de critique, touche si précision d'au moins 50 %), pire (l'inverse du meilleur). Ligne "Fin du tour" avec les PV de chaque Pokémon. Le vrai taux de KO contre les PV du moment est rappelé quand il est entre 0 et 100 %.
+- En dessous, "Détail par attaque" : la carte complète (précision, vrai taux de KO, rolls) pour chaque Pokémon en jeu contre chacune de ses cibles.
+- Le composant SpeedBar et la notion attackerSide ont été retirés ; sauvegarde locale en version 4.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -203,6 +210,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.3.0 : format 1v1 / 2v2, Pokémon en jeu par équipe, déroulé du tour avec trois scénarios, détail par attaque. Fin des rôles attaquant / défenseur.
 - 2026-09-06 : v1.2.2 : PV saisissables à la main sur les cartes, bouton Switch (pièges, poison, Toile Gluante, remise à zéro).
 - 2026-09-06 : v1.2.1 : tri des attaques par type / catégorie / puissance théorique, Abri via l'attaque, double-clic, Méga séparées, PV sur les cartes, priorité dans la vitesse, soleil adouci, dégradés fixes.
 - 2026-09-06 : v1.2.0 : stats d'usage et presets, fenêtres de choix (attaques / objets / Pokémon avec suggestions et filtres), Abri et stades, effets visuels refaits. Décision : la source de stats d'usage est championsbattledata.com ; les learnsets viennent du groupe de versions "champions" de PokéAPI.

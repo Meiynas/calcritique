@@ -22,6 +22,8 @@ interface Props {
   onClear?: () => void
   /** Espèces de la même équipe (pour les suggestions de coéquipiers) */
   teamSpecies?: string[]
+  /** Cibles possibles en 2v2 (absent en 1v1) */
+  targetOptions?: { value: number | 'ally'; label: string }[]
   lang: Lang
 }
 
@@ -29,7 +31,7 @@ const NATURE_KEYS = Object.keys(NAMES.natures)
 const STATUSES: StatusKey[] = ['', 'brn', 'par', 'psn', 'tox', 'slp', 'frz']
 const STAGES = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
 
-export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], lang }: Props) {
+export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang }: Props) {
   const t = dict(lang)
   const species = speciesInfo(value.species)
   const stats = useMemo(() => finalStats(value), [value])
@@ -203,9 +205,23 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
 
       {/* Attaques : clic = mettre en avant, ✎ = changer */}
       <div>
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.moves}</span>
-          <span className="text-[10px] text-muted">{t.activeMoveHint}</span>
+          {targetOptions ? (
+            <label className="flex items-center gap-1 text-[11px] text-muted">
+              {t.targetLabel}
+              <select
+                className="rounded border border-border bg-surface-2 px-1 py-0.5 text-xs text-text"
+                value={value.target === null ? 'auto' : String(value.target)}
+                onChange={(e) => set('target', e.target.value === 'auto' ? null : e.target.value === 'ally' ? 'ally' : Number(e.target.value))}
+              >
+                <option value="auto">{t.targetAuto}</option>
+                {targetOptions.map((o) => <option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
+              </select>
+            </label>
+          ) : (
+            <span className="text-[10px] text-muted">{t.activeMoveHint}</span>
+          )}
         </div>
         <div className="mt-1 grid grid-cols-1 gap-1">
           {value.moves.map((m, i) => (
