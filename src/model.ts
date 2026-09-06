@@ -27,8 +27,10 @@ export interface PokemonState {
   critStage: number // bonus de coup critique (0 à 3), ex : Focus Energy = +2
   protect: boolean // utilise Abri ce tour (pour Ruse, Poing Invisible...)
   activeMove: number // attaque mise en avant dans les résultats (0 à 3) ; SWITCH_IN (-1) = "arrivée sur le terrain"
-  /** Sous Vampigraine (perd 1/8 PV en fin de tour au profit de l'adversaire) */
+  /** Victime de Vampigraine (perd 1/8 PV en fin de tour au profit de l'adversaire) */
   leechSeed: boolean
+  /** Index, dans l'équipe adverse, du Pokémon qui a posé la Vampigraine (null = premier adversaire vivant) */
+  leechSeeder: number | null
   /** Cible de l'attaque mise en avant (2v2) : emplacement dans l'équipe adverse, ou allié ('ally'). null = cible par défaut */
   target: number | 'ally' | null
 }
@@ -106,6 +108,7 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     protect: false,
     activeMove: 0,
     leechSeed: false,
+    leechSeeder: null,
     target: null,
     ...overrides,
   }

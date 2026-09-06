@@ -13,6 +13,7 @@ import { label } from '../lib/names'
 import { speciesInfo } from '../lib/engine'
 import PokemonPanel, { MovesOnlyPanel } from './PokemonPanel'
 import TypeBadge from './TypeBadge'
+import { Hover, PokemonTip, SPRITES } from './Tooltips'
 import { Toggle } from './FieldPanel'
 
 interface Props {
@@ -29,9 +30,11 @@ interface Props {
   field: FieldState
   lang: Lang
   targetOptions?: { value: number | 'ally'; label: string; pos: string }[]
+  foeTeam: PokemonState[]
+  onChangeFoeTeam: (team: PokemonState[]) => void
 }
 
-export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions }: Props) {
+export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
@@ -54,6 +57,15 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
     next[i] = p
     onChangeTeam(next)
   }
+  // Vampigraine : cases "Poseur des Vampigraines de X" pour les victimes de l'équipe adverse
+  const seederFor = (myIndex: number) => ({
+    victims: foeTeam.map((p, i) => ({ index: i, species: p.species, mine: p.leechSeeder === myIndex })).filter((v) => foeTeam[v.index].leechSeed && v.species),
+    toggle: (victimIndex: number, on: boolean) => {
+      const next = [...foeTeam]
+      next[victimIndex] = { ...next[victimIndex], leechSeeder: on ? myIndex : null }
+      onChangeFoeTeam(next)
+    },
+  })
   const wallClass = ['side-fx', sideState.reflect && 'side-reflect', sideState.lightScreen && 'side-lightscreen', sideState.auroraVeil && 'side-auroraveil', sideState.helpingHand && 'side-helpinghand', sideState.friendGuard && 'side-friendguard'].filter(Boolean).join(' ')
 
   return (
@@ -71,7 +83,7 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
             <div key={pos} className={'flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ' + (filled ? (side === 'left' ? 'border-accent/60 bg-accent/10' : 'border-sky-400/60 bg-sky-400/10') : 'border-dashed border-border text-muted')}>
               <span className={'rounded px-1 text-[10px] font-bold text-white ' + (side === 'left' ? 'bg-accent' : 'bg-sky-500')}>{maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●'}</span>
               {filled ? (
-                <button type="button" onClick={() => onSelect(idx)} className="min-w-0 flex-1 truncate text-left font-semibold hover:underline">{label('species', mon!.species, lang)}</button>
+                <Hover tip={<PokemonTip species={mon!.species} lang={lang} />} className="min-w-0 flex-1 truncate"><button type="button" onClick={() => onSelect(idx)} className="w-full truncate text-left font-semibold hover:underline">{label('species', mon!.species, lang)}</button></Hover>
               ) : (
                 <span className="flex-1 truncate">{t.emptyField}</span>
               )}
@@ -139,6 +151,7 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
                 pos={pos === 0 ? 'A' : 'B'}
                 value={mon ?? emptyPokemon()}
                 onChange={(p) => { if (idx !== undefined) setMon(idx, p) }}
+                seeder={idx !== undefined ? seederFor(idx) : undefined}
                 targetOptions={targetOptions}
                 role={side === 'left' ? 'attacker' : 'defender'}
                 lang={lang}
@@ -153,6 +166,7 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
           value={team[selected]}
           targetOptions={targetOptions}
           onChange={(p) => setMon(selected, p)}
+          seeder={seederFor(selected)}
           onClear={() => setMon(selected, emptyPokemon())}
           teamSpecies={team.map((p) => p.species)}
           lang={lang}
@@ -218,23 +232,24 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
               )
             })}
           </span>
-          <span className="truncate text-sm font-semibold">{label('species', mon.species, lang)}</span>
+          <Hover tip={<PokemonTip species={mon.species} lang={lang} />} className="flex min-w-0 items-center gap-1 truncate text-sm font-semibold">
+            {SPRITES[mon.species] && <img src={SPRITES[mon.species]} alt="" className="inline-block h-7 w-9 shrink-0 object-contain object-top align-middle" style={{ imageRendering: 'pixelated' }} />}
+            {label('species', mon.species, lang)}
+          </Hover>
         </span>
-        <span className="flex items-center gap-0.5">
-          {sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}
-          <button
-            type="button"
-            title={t.switchInTitle}
-            onClick={(e) => { e.stopPropagation(); onSwitch() }}
-            onDoubleClick={(e) => e.stopPropagation()}
-            className="ml-1 rounded border border-border bg-surface-2 px-1.5 text-[11px] text-muted hover:border-accent hover:text-text"
-          >
-            ⇄
-          </button>
-        </span>
+        <button
+          type="button"
+          title={t.switchInTitle}
+          onClick={(e) => { e.stopPropagation(); onSwitch() }}
+          onDoubleClick={(e) => e.stopPropagation()}
+          className="ml-1 shrink-0 rounded border border-border bg-surface-2 px-1.5 text-[11px] text-muted hover:border-accent hover:text-text"
+        >
+          ⇄
+        </button>
       </div>
-      <div className="truncate text-[11px] text-muted">
-        {mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}` : ''}
+      <div className="flex items-center justify-between gap-1 text-[11px] text-muted">
+        <span className="min-w-0 truncate">{mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}` : ''}</span>
+        <span className="flex shrink-0 items-center gap-0.5">{sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
       </div>
       <div className="mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/10">

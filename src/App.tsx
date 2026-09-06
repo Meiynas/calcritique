@@ -87,6 +87,8 @@ export default function App() {
         active={state.active[side]}
         maxActive={activeCount(state.mode)}
         onSelect={(i) => setState((s) => ({ ...s, selected: { ...s.selected, [side]: i } }))}
+        foeTeam={state.teams[foe]}
+        onChangeFoeTeam={(team) => setState((s) => ({ ...s, teams: { ...s.teams, [foe]: team } }))}
         onSetActive={(pos, i) =>
           setState((s) => {
             const active = setActiveSlot(s.active[side], pos, i, activeCount(s.mode))

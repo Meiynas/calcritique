@@ -240,6 +240,12 @@ Ajouté en v1.7.1 (retours du 6 septembre 2026, lisibilité des chances) :
 - Jauge "Chances" : la légende est sous la barre, dans l'ordre des segments, avec le pourcentage "touche normalement" (ex. "27 % apeuré avant d'agir · 70 % touche normalement · 3 % crit").
 - Lignes renommées "Vrai taux de KO" et "Dégâts seuls", avec une phrase d'explication sous le titre "Détail par attaque" et des infobulles. Le vrai taux de KO inclut maintenant la chance d'agir (apeuré avant d'agir, paralysie totale, sommeil, gel) en plus de la précision et du critique : computeMove reçoit battle.actChance qui multiplie la chance de toucher de chaque tentative. "Dégâts seuls" = les 16 rolls uniquement, comme si l'attaque touchait à coup sûr sans critique.
 
+Ajouté en v1.8.0 (retours du 6 septembre 2026, infobulles et Vampigraine) :
+- Infobulles au survol (src/components/Tooltips.tsx, composant Hover) : sur une attaque (liste des 4 attaques et fenêtre de choix) : type, nom FR + EN, catégorie, puissance, précision, priorité et description du jeu (src/data/movedesc.json, généré par scripts/build-movedesc.py depuis move_flavor_text.csv de PokéAPI, FR et EN, 878 attaques). Sur un Pokémon (cartes, bandeau A / B, fenêtre de choix) : icône, nom, types, 6 stats de base, talents possibles, fourchette de Vitesse au niveau 50 (0 SP nature − à 32 SP nature +) et Vitesse avec Mouchoir Choix.
+- Icônes des Pokémon (src/data/sprites.json, 467 Ko, généré par scripts/build-sprites.py depuis le dépôt PokeAPI/sprites, icônes génération VIII embarquées en data URI pour rester hors ligne) : affichées sur les cartes, dans la fenêtre de choix et dans l'infobulle.
+- Étiquettes de type de largeur fixe dans les listes d'attaques (prop fixed de TypeBadge) pour aligner les noms. Cartes d'équipe : nom + icône sur la première ligne, objet et types sur la deuxième.
+- Vampigraine : la case s'appelle "Victime de Vampigraine". Quand elle est cochée, l'équipe adverse affiche "Poseur des Vampigraines de X" sur chaque fiche ; le Pokémon coché récupère les PV en fin de tour (champ leechSeeder = index dans l'équipe adverse ; sinon le premier adversaire vivant).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -255,6 +261,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.8.0 : infobulles attaques et Pokémon avec icônes embarquées et descriptions du jeu, étiquettes alignées, Vampigraine victime / poseur.
 - 2026-09-06 : v1.7.1 : légende des chances sous la barre avec "touche normalement", vrai taux de KO pondéré par la chance d'agir, libellés explicites.
 - 2026-09-06 : v1.7.0 : mode pièges, action "Arrivée sur le terrain" (pièges + talents d'entrée), drain / contrecoup / Orbe Vie / Baie Sitrus dans la timeline, effets de fin de tour, chance d'être apeuré affichée sur l'attaque de la cible.
 - 2026-09-06 : v1.6.1 : taux Champions (para 12,5 %, dégel 25 %), "apeuré", jauge des chances pondérée en chaîne, attaques à effet de statut (Plaquage, Ébullition, Spore...) dans le tour et la jauge.

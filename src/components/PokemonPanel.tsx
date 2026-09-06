@@ -10,15 +10,22 @@ import { canLearn, mostPlayedSet, usagePercent } from '../lib/usage'
 import { isProtecting } from '../lib/engine'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
+import { Hover, MoveTip } from './Tooltips'
 import MovePicker from './MovePicker'
 import ItemPicker from './ItemPicker'
 import PokemonPicker from './PokemonPicker'
+
+export interface Seeder {
+  victims: { index: number; species: string; mine: boolean }[]
+  toggle: (victimIndex: number, on: boolean) => void
+}
 
 interface Props {
   title: string
   role: 'attacker' | 'defender'
   value: PokemonState
   onChange: (p: PokemonState) => void
+  seeder?: Seeder
   onClear?: () => void
   /** Espèces de la même équipe (pour les suggestions de coéquipiers) */
   teamSpecies?: string[]
@@ -31,7 +38,7 @@ const NATURE_KEYS = Object.keys(NAMES.natures)
 const STATUSES: StatusKey[] = ['', 'brn', 'par', 'psn', 'tox', 'slp', 'frz']
 const STAGES = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
 
-export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang }: Props) {
+export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang, seeder }: Props) {
   const t = dict(lang)
   const species = speciesInfo(value.species)
   const stats = useMemo(() => finalStats(value), [value])
@@ -270,9 +277,10 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
           </select>
         </Field>
         <label className="flex items-center gap-1 pb-2 text-xs text-muted">
-          <input type="checkbox" checked={value.leechSeed} onChange={(e) => set('leechSeed', e.target.checked)} />🌱 {t.leechSeed}
+          <input type="checkbox" checked={value.leechSeed} onChange={(e) => set('leechSeed', e.target.checked)} />🌱 {t.leechSeedVictim}
         </label>
       </div>
+      <SeederBoxes seeder={seeder} lang={lang} />
 
       {picker?.kind === 'move' && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(picker.slot, m); setPicker(null) }} onClose={() => setPicker(null)} />
@@ -284,8 +292,8 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
 }
 
 /** Vue "attaques seulement" d'un Pokémon sur le terrain (mode 2v2, bouton Stats / Attaques). */
-export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang }: {
-  pos: string; value: PokemonState; onChange: (p: PokemonState) => void; targetOptions?: { value: number | 'ally'; label: string; pos: string }[]; role: 'attacker' | 'defender'; lang: Lang
+export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang, seeder }: {
+  pos: string; value: PokemonState; onChange: (p: PokemonState) => void; targetOptions?: { value: number | 'ally'; label: string; pos: string }[]; role: 'attacker' | 'defender'; lang: Lang; seeder?: Seeder
 }) {
   const t = dict(lang)
   const [slot, setSlot] = useState<number | null>(null)
@@ -333,11 +341,27 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
         <select className="rounded border border-border bg-surface-2 px-1 py-0.5 text-text" value={value.status} onChange={(e) => onChange({ ...value, status: e.target.value as StatusKey })}>
           {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
         </select>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={value.leechSeed} onChange={(e) => onChange({ ...value, leechSeed: e.target.checked })} />🌱 {t.leechSeed}</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={value.leechSeed} onChange={(e) => onChange({ ...value, leechSeed: e.target.checked })} />🌱 {t.leechSeedVictim}</label>
       </div>
+      <SeederBoxes seeder={seeder} lang={lang} />
       {slot !== null && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(slot, m); setSlot(null) }} onClose={() => setSlot(null)} />
       )}
+    </div>
+  )
+}
+
+/** Cases "Poseur des Vampigraines de X" pour les victimes adverses */
+function SeederBoxes({ seeder, lang }: { seeder?: Seeder; lang: Lang }) {
+  const t = dict(lang)
+  if (!seeder || seeder.victims.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
+      {seeder.victims.map((v) => (
+        <label key={v.index} className="flex items-center gap-1">
+          <input type="checkbox" checked={v.mine} onChange={(e) => seeder.toggle(v.index, e.target.checked)} />🌱 {t.leechSeeder(label('species', v.species, lang))}
+        </label>
+      ))}
     </div>
   )
 }
@@ -366,12 +390,12 @@ function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role
   const learnable = !move || canLearn(species, move)
   const ring = active ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-border bg-surface-2 hover:border-muted'
   return (
-    <div className={'flex items-center gap-1 rounded-md border pl-2 pr-1 py-1 text-sm ' + ring} title={t.dblClickHint}>
+    <div className={'flex items-center gap-1 rounded-md border pl-2 pr-1 py-1 text-sm ' + ring}>
       <button type="button" onClick={onSelect} onDoubleClick={onEdit} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         {info ? (
           <>
-            <TypeBadge type={info.type} lang={lang} small />
-            <span className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}</span>
+            <TypeBadge type={info.type} lang={lang} small fixed />
+            <Hover tip={<MoveTip move={move} lang={lang} />} className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}</Hover>
             {!learnable && <span className="text-[10px] text-accent" title={t.notLearnable}>⚠</span>}
             <span className="text-[11px] tabular-nums text-muted">{info.category === 'Status' ? '·' : info.basePower}{extra?.acc !== null && extra?.acc !== undefined && extra.acc < 100 ? ` · ${extra.acc}%` : ''}</span>
             {pct !== undefined && <span className="w-11 text-right text-[10px] tabular-nums text-emerald-300">{pct}%</span>}

@@ -7,6 +7,7 @@ import { EXTRA, moveInfo, TYPE_NAMES } from '../lib/engine'
 import { learnset, topMoves, usagePercent } from '../lib/usage'
 import Modal from './Modal'
 import TypeBadge from './TypeBadge'
+import { Hover, MoveTip } from './Tooltips'
 
 type Cat = '' | 'Physical' | 'Special' | 'Status'
 
@@ -119,8 +120,8 @@ export function MoveRow({ move, pct, lang, onPick, learnable, compact }: { move:
       onClick={() => onPick(move)}
       className={'flex w-full items-center gap-2 rounded px-2 text-left text-sm hover:bg-surface-2 ' + (compact ? 'py-0.5' : 'py-1') + (learnable ? '' : ' opacity-50')}
     >
-      <TypeBadge type={info.type} lang={lang} small />
-      <span className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}{lang === 'fr' && label('moves', move, 'en') !== label('moves', move, 'fr') && <span className="ml-1 text-xs text-muted">{label('moves', move, 'en')}</span>}</span>
+      <TypeBadge type={info.type} lang={lang} small fixed />
+      <Hover tip={<MoveTip move={move} lang={lang} />} className="min-w-0 flex-1 truncate font-medium">{label('moves', move, lang)}{lang === 'fr' && label('moves', move, 'en') !== label('moves', move, 'fr') && <span className="ml-1 text-xs text-muted">{label('moves', move, 'en')}</span>}</Hover>
       <span className="w-9 text-right text-xs text-muted">{cat}</span>
       <span className="w-8 text-right text-xs tabular-nums">{info.basePower > 0 ? info.basePower : '·'}</span>
       <span className="w-10 text-right text-xs tabular-nums text-muted">{extra?.acc === null ? '∞' : `${extra?.acc ?? 100}%`}</span>

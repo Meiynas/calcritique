@@ -7,11 +7,11 @@ export const TYPE_COLORS: Record<string, string> = {
   Rock: '#B6A136', Ghost: '#735797', Dragon: '#6F35FC', Dark: '#705746', Steel: '#B7B7CE', Fairy: '#D685AD', Stellar: '#8de0c9',
 }
 
-export default function TypeBadge({ type, lang, small, tera }: { type: string; lang: Lang; small?: boolean; tera?: boolean }) {
+export default function TypeBadge({ type, lang, small, tera, fixed }: { type: string; lang: Lang; small?: boolean; tera?: boolean; fixed?: boolean }) {
   const color = TYPE_COLORS[type] ?? '#888'
   return (
     <span
-      className={'inline-flex items-center rounded font-semibold uppercase tracking-wide text-white ' + (small ? 'px-1 py-px text-[9px]' : 'px-1.5 py-0.5 text-[10px]') + (tera ? ' ring-2 ring-white/70' : '')}
+      className={'inline-flex items-center rounded font-semibold uppercase tracking-wide text-white ' + (small ? 'px-1 py-px text-[9px]' : 'px-1.5 py-0.5 text-[10px]') + (fixed ? ' w-16 justify-center' : '') + (tera ? ' ring-2 ring-white/70' : '')}
       style={{ backgroundColor: color, textShadow: '0 1px 1px rgba(0,0,0,.5)' }}
       title={tera ? 'Tera' : undefined}
     >

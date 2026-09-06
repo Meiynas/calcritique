@@ -401,7 +401,9 @@ export function simulateTurn(state: AppState): TurnResult {
         hp[k] = { hp: nh, maxHP: c.maxHP, fainted: nh <= 0 }
         endOfTurn.push({ slot: a.actor, reason: e.reason, delta: nh - c.hp })
         if (e.reason === 'leechSeed') {
-          const rcv = activeSlots(state, otherSide(a.actor.side)).find((tg) => !hp[slotKey(tg)]?.fainted)
+          const foes = activeSlots(state, otherSide(a.actor.side))
+          const seeder = mons[k].leechSeeder
+          const rcv = foes.find((tg) => tg.index === seeder && !hp[slotKey(tg)]?.fainted) ?? foes.find((tg) => !hp[slotKey(tg)]?.fainted)
           if (rcv) {
             const rk = slotKey(rcv)
             const rc = hp[rk]
