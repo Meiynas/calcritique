@@ -51,7 +51,9 @@ export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
 
   const suggested = suggestions.filter((s) => matches(s.species)).slice(0, 10)
   const suggestedSet = new Set(suggested.map((s) => s.species))
-  const rest = LEGAL_SPECIES.filter((s) => !suggestedSet.has(s) && matches(s)).sort((a, b) => label('species', a, lang).localeCompare(label('species', b, lang)))
+  const restAll = LEGAL_SPECIES.filter((s) => !suggestedSet.has(s) && matches(s)).sort((a, b) => label('species', a, lang).localeCompare(label('species', b, lang)))
+  const rest = restAll.filter((s) => !s.includes('-Mega'))
+  const megas = restAll.filter((s) => s.includes('-Mega'))
 
   function addToGroup(gi: number, move: string) {
     if (!move) return
@@ -117,7 +119,9 @@ export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
         )}
         <Title>{t.allPokemon} ({rest.length})</Title>
         {rest.map((s) => <Row key={s} species={s} lang={lang} onPick={onPick} />)}
-        {rest.length === 0 && suggested.length === 0 && <p className="px-2 py-4 text-sm text-muted">∅</p>}
+        {megas.length > 0 && <Title>{t.megaSection} ({megas.length})</Title>}
+        {megas.map((s) => <Row key={s} species={s} lang={lang} onPick={onPick} />)}
+        {rest.length === 0 && megas.length === 0 && suggested.length === 0 && <p className="px-2 py-4 text-sm text-muted">∅</p>}
         <p className="px-2 py-3 text-[10px] text-muted">{t.usageSource} : {USAGE.source}, {USAGE.season}, {USAGE.date}</p>
       </div>
     </Modal>

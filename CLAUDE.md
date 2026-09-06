@@ -174,6 +174,15 @@ Ajouté en v1.2.0 (retours de l'humain du 6 septembre 2026) :
 - Effets visuels refaits (canvas + CSS) : pluie en gouttes, neige, sable en grains vifs, feuilles pour Herbu, petits éclairs pour Électrique, violet qui pulse pour Psychique, brume rose pour Brumeux, soleil avec rayons et artefacts d'objectif, poussières qui chutent pour Gravité, anneaux bleus pour Zone Magique, hachures pour Zone Étrange, halo doré pulsant pour Coup d'Main, filigrane hexagonal pour Garde Amie. Murs : Mur Lumière = rose, Protection = bleu, Voile Aurore = dégradé rose-bleu, Protection + Mur Lumière = dégradé épaisseur double.
 - Équipes de départ tirées des stats d'usage (Kingambit, Sneasler, Incineroar contre Garchomp, Whimsicott, Sinistcha). Sauvegarde locale en version 3.
 
+Ajouté en v1.2.1 (retours du 6 septembre 2026, suite) :
+- Fenêtre attaques : après le top 10, les attaques sont rangées par type (nom du type dans la langue affichée), puis Physique, Spéciale, Statut ; dans Physique et Spéciale par puissance théorique décroissante (puissance x précision, précision 100 pour les attaques qui ne ratent jamais) ; Statut par ordre alphabétique. Un séparateur par type.
+- Mettre Abri (ou Détection, Pics-Bouclier, Bouclier Royal, Blocage, Piège Soyeux...) en avant coche automatiquement le bouton Abri ("via l'attaque").
+- Double-clic sur une carte de Pokémon ou sur une ligne d'attaque ouvre la fenêtre de choix.
+- Fenêtre Pokémon : section "Méga-Évolutions" séparée.
+- PV actuels affichés et réglables sur chaque carte de Pokémon (barre colorée), plus dans le bas du panneau.
+- Barre de vitesse : la priorité des attaques mises en avant est prise en compte (Farceur, Ailes Bourrasque, Triage, Gliss'Herbe sur Champ Herbu) ; le verdict dit qui agit en premier et une ligne violette détaille les priorités.
+- Soleil : rayons adoucis (flou), artefacts d'objectif hexagonaux. Dégradés de Voile Aurore et Protection + Mur Lumière fixes (plus d'animation). Recliquer sur la météo ou le terrain actif le désactive.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -189,5 +198,6 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.2.1 : tri des attaques par type / catégorie / puissance théorique, Abri via l'attaque, double-clic, Méga séparées, PV sur les cartes, priorité dans la vitesse, soleil adouci, dégradés fixes.
 - 2026-09-06 : v1.2.0 : stats d'usage et presets, fenêtres de choix (attaques / objets / Pokémon avec suggestions et filtres), Abri et stades, effets visuels refaits. Décision : la source de stats d'usage est championsbattledata.com ; les learnsets viennent du groupe de versions "champions" de PokéAPI.
 - 2026-09-06 : v1.1.0 : interface en trois colonnes (équipe 1, calculs, équipe 2) et effets visuels plein écran (terrain, météo, murs, pièges, Vent Arrière), à la demande de l'humain. La bibliothèque de sets (étape 2) reste à faire.

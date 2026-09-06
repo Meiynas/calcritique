@@ -98,30 +98,26 @@ input[type="number"]::-webkit-inner-spin-button {
 .fx-sun {
   background:
     radial-gradient(circle at 86% -6%, rgba(255, 244, 200, 0.9), rgba(253, 224, 71, 0.55) 12%, rgba(251, 146, 60, 0.22) 32%, transparent 60%),
-    repeating-conic-gradient(from -20deg at 86% -6%, rgba(255, 236, 160, 0.09) 0 2.5deg, transparent 2.5deg 12deg);
+    repeating-conic-gradient(from -20deg at 86% -6%, transparent 0deg, rgba(255, 236, 160, 0.08) 2deg, rgba(255, 236, 160, 0.08) 3deg, transparent 5deg, transparent 13deg);
   box-shadow: inset 0 0 220px 40px rgba(251, 191, 36, 0.22);
+  filter: blur(10px);
   animation: fx-sun-breathe 5s ease-in-out infinite;
 }
 @keyframes fx-sun-breathe {
-  0%, 100% { opacity: 0.85; filter: blur(0px); }
-  50% { opacity: 1; filter: blur(0.6px); }
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
-/* Artefacts d'objectif : disques et anneau le long de la diagonale */
-.fx-flare {
-  background:
-    radial-gradient(circle at 74% 10%, rgba(255, 255, 255, 0.35) 0 6px, transparent 8px),
-    radial-gradient(circle at 62% 26%, rgba(253, 224, 71, 0.25) 0 18px, transparent 20px),
-    radial-gradient(circle at 52% 40%, rgba(251, 146, 60, 0.18) 0 34px, rgba(251, 146, 60, 0.0) 36px),
-    radial-gradient(circle at 42% 52%, transparent 44px, rgba(255, 210, 120, 0.22) 46px, rgba(255, 210, 120, 0.22) 49px, transparent 51px),
-    radial-gradient(circle at 30% 68%, rgba(134, 239, 172, 0.16) 0 12px, transparent 14px),
-    radial-gradient(circle at 18% 84%, rgba(147, 197, 253, 0.14) 0 26px, transparent 28px),
-    linear-gradient(35deg, transparent 40%, rgba(255, 240, 200, 0.10) 50%, transparent 60%);
-  mix-blend-mode: screen;
-  animation: fx-flare-drift 7s ease-in-out infinite alternate;
+/* Artefacts d'objectif : hexagones le long de la diagonale partant du soleil */
+.fx-flare { mix-blend-mode: screen; animation: fx-flare-drift 7s ease-in-out infinite alternate; }
+.fx-hex {
+  position: absolute;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+  transform: translate(-50%, -50%);
+  filter: blur(1px);
 }
 @keyframes fx-flare-drift {
-  from { transform: translate(0, 0); opacity: 0.8; }
-  to { transform: translate(-1.5%, 1%); opacity: 1; }
+  from { transform: translate(0, 0); opacity: 0.75; }
+  to { transform: translate(-1.2%, 0.8%); opacity: 1; }
 }
 
 /* Teintes de météo (les particules sont sur le canvas) */
@@ -188,7 +184,6 @@ input[type="number"]::-webkit-inner-spin-button {
 .side-reflect { --wall-width: 3px; --wall-bg: rgba(96, 165, 250, 0.95); box-shadow: inset 0 0 40px rgba(96, 165, 250, 0.18); }
 .side-auroraveil { --wall-width: 3px; --wall-bg: linear-gradient(135deg, #f472b6, #60a5fa, #f472b6, #60a5fa); background-size: 300% 300%; box-shadow: inset 0 0 50px rgba(167, 139, 250, 0.22); }
 .side-reflect.side-lightscreen { --wall-width: 6px; --wall-bg: linear-gradient(135deg, #f472b6, #60a5fa, #f472b6, #60a5fa); box-shadow: inset 0 0 60px rgba(167, 139, 250, 0.28); }
-.side-auroraveil::before, .side-reflect.side-lightscreen::before { background-size: 300% 300%; animation: fx-aurora 5s linear infinite; }
 @keyframes fx-aurora {
   from { background-position: 0% 50%; }
   to { background-position: 300% 50%; }

@@ -44,9 +44,24 @@ export default function MovePicker({ species, currentMoves, lang, onPick, onClos
   }
   const topShown = top.filter(([m]) => matches(m))
   const topSet = new Set(top.map(([m]) => m))
+  const catOrder: Record<string, number> = { Physical: 0, Special: 1, Status: 2 }
+  const power = (m: string) => {
+    const info = moveInfo(m)!
+    const acc = EXTRA.moves[m]?.acc
+    return info.basePower * ((acc === null || acc === undefined ? 100 : acc) / 100)
+  }
   const rest = pool
     .filter((m) => !topSet.has(m) && !currentMoves.includes(m) && matches(m))
-    .sort((a, b) => label('moves', a, lang).localeCompare(label('moves', b, lang)))
+    .sort((a, b) => {
+      const ia = moveInfo(a)!, ib = moveInfo(b)!
+      const ta = label('types', ia.type, lang), tb = label('types', ib.type, lang)
+      if (ta !== tb) return ta.localeCompare(tb)
+      const ca = catOrder[ia.category ?? 'Status'], cb = catOrder[ib.category ?? 'Status']
+      if (ca !== cb) return ca - cb
+      if (ca === 2) return label('moves', a, lang).localeCompare(label('moves', b, lang))
+      const d = power(b) - power(a)
+      return d !== 0 ? d : label('moves', a, lang).localeCompare(label('moves', b, lang))
+    })
 
   return (
     <Modal title={`${t.pickMove} · ${label('species', species, lang)}`} onClose={onClose} wide>
@@ -74,7 +89,16 @@ export default function MovePicker({ species, currentMoves, lang, onPick, onClos
           </>
         )}
         <SectionTitle>{showAll ? t.allMovesTitle : t.learnableMoves} ({rest.length})</SectionTitle>
-        {rest.map((m) => <MoveRow key={m} move={m} pct={usagePercent(species, 'moves', m)} lang={lang} onPick={onPick} learnable={!showAll || learnset(species).includes(m)} />)}
+        {rest.map((m, i) => {
+          const ty = moveInfo(m)!.type
+          const prevTy = i > 0 ? moveInfo(rest[i - 1])!.type : null
+          return (
+            <div key={m}>
+              {ty !== prevTy && <div className="mt-1 flex items-center gap-2 px-2 py-0.5"><TypeBadge type={ty} lang={lang} small /><span className="h-px flex-1 bg-border" /></div>}
+              <MoveRow move={m} pct={usagePercent(species, 'moves', m)} lang={lang} onPick={onPick} learnable={!showAll || learnset(species).includes(m)} />
+            </div>
+          )
+        })}
         {rest.length === 0 && topShown.length === 0 && <p className="px-2 py-4 text-sm text-muted">∅</p>}
       </div>
     </Modal>

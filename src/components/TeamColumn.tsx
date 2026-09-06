@@ -1,7 +1,11 @@
 // Colonne d'une équipe : pièges au-dessus, effets du côté (murs, Vent Arrière...),
 // 6 emplacements de Pokémon, et l'éditeur du Pokémon sélectionné.
+import { useState } from 'react'
 import type { Lang, PokemonState, SideKey, SideState } from '../model'
 import { emptyPokemon } from '../model'
+import { mostPlayedSet } from '../lib/usage'
+import { finalStats } from '../lib/engine'
+import PokemonPicker from './PokemonPicker'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
 import { speciesInfo } from '../lib/engine'
@@ -23,6 +27,7 @@ interface Props {
 
 export default function TeamColumn({ side, team, selected, onSelect, onChangeTeam, sideState, onChangeSide, isAttacker, lang }: Props) {
   const t = dict(lang)
+  const [pickSlot, setPickSlot] = useState<number | null>(null)
   const setSide = <K extends keyof SideState>(k: K, v: SideState[K]) => onChangeSide({ ...sideState, [k]: v })
   const setMon = (i: number, p: PokemonState) => {
     const next = [...team]
@@ -56,7 +61,16 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
       {/* Les 6 emplacements */}
       <div className="grid grid-cols-2 gap-1.5">
         {team.map((p, i) => (
-          <MonCard key={i} mon={p} active={i === selected} onClick={() => onSelect(i)} lang={lang} isAttacker={isAttacker} />
+          <MonCard
+            key={i}
+            mon={p}
+            active={i === selected}
+            onClick={() => onSelect(i)}
+            onDoubleClick={() => { onSelect(i); setPickSlot(i) }}
+            onHP={(pct) => setMon(i, { ...p, curHPPercent: pct })}
+            lang={lang}
+            isAttacker={isAttacker}
+          />
         ))}
       </div>
 
@@ -70,23 +84,44 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
         teamSpecies={team.map((p) => p.species)}
         lang={lang}
       />
+      {pickSlot !== null && (
+        <PokemonPicker
+          team={team.map((p) => p.species)}
+          lang={lang}
+          onPick={(sp) => { setMon(pickSlot, { ...mostPlayedSet(sp), activeMove: 0 }); setPickSlot(null) }}
+          onClose={() => setPickSlot(null)}
+        />
+      )}
     </div>
   )
 }
 
-function MonCard({ mon, active, onClick, lang, isAttacker }: { mon: PokemonState; active: boolean; onClick: () => void; lang: Lang; isAttacker: boolean }) {
+function MonCard({ mon, active, onClick, onDoubleClick, onHP, lang, isAttacker }: {
+  mon: PokemonState; active: boolean; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; lang: Lang; isAttacker: boolean
+}) {
   const t = dict(lang)
   const sp = speciesInfo(mon.species)
   const ring = active ? (isAttacker ? 'border-accent ring-1 ring-accent/60' : 'border-sky-400 ring-1 ring-sky-400/60') : 'border-border hover:border-muted'
   if (!mon.species || !sp) {
     return (
-      <button type="button" onClick={onClick} className={'rounded-lg border border-dashed bg-surface/60 px-2 py-2 text-left text-xs text-muted ' + ring}>
+      <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={'rounded-lg border border-dashed bg-surface/60 px-2 py-2 text-left text-xs text-muted ' + ring}>
         + {t.emptySlot}
       </button>
     )
   }
+  const maxHP = finalStats(mon).hp
+  const cur = Math.round((maxHP * mon.curHPPercent) / 100)
+  const hpColor = mon.curHPPercent > 50 ? 'bg-emerald-400' : mon.curHPPercent > 20 ? 'bg-amber-400' : 'bg-accent'
   return (
-    <button type="button" onClick={onClick} className={'rounded-lg border bg-surface px-2 py-1.5 text-left ' + ring}>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
+      title={t.dblClickHint}
+      className={'cursor-pointer rounded-lg border bg-surface px-2 py-1.5 text-left ' + ring}
+    >
       <div className="flex items-center justify-between gap-1">
         <span className="truncate text-sm font-semibold">{label('species', mon.species, lang)}</span>
         <span className="flex gap-0.5">{sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
@@ -94,7 +129,19 @@ function MonCard({ mon, active, onClick, lang, isAttacker }: { mon: PokemonState
       <div className="truncate text-[11px] text-muted">
         {mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}` : ''}
       </div>
-    </button>
+      <div className="mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+        <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+          <div className={'absolute inset-y-0 left-0 rounded-full ' + hpColor} style={{ width: `${mon.curHPPercent}%` }} />
+          <input
+            type="range" min={1} max={100} value={mon.curHPPercent}
+            onChange={(e) => onHP(Number(e.target.value))}
+            className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
+            title={t.hp}
+          />
+        </div>
+        <span className="w-16 text-right text-[10px] tabular-nums text-muted">{cur}/{maxHP} <span className="text-white/70">{mon.curHPPercent}%</span></span>
+      </div>
+    </div>
   )
 }
 

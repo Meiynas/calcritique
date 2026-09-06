@@ -7,6 +7,7 @@ import { label, NAMES } from '../lib/names'
 import { EXTRA, TYPE_NAMES, finalStats, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
 import { SP_MAX_STAT, SP_MAX_TOTAL, spTotal } from '../lib/champions'
 import { canLearn, mostPlayedSet, usagePercent } from '../lib/usage'
+import { isProtecting } from '../lib/engine'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
 import MovePicker from './MovePicker'
@@ -192,10 +193,10 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
             type="button"
             onClick={() => set('protect', !value.protect)}
             title={t.protectHint}
-            aria-pressed={value.protect}
-            className={'ml-auto rounded-md border px-2 py-0.5 text-xs font-medium ' + (value.protect ? 'border-emerald-400 bg-emerald-500/25 text-emerald-100 ring-1 ring-white/30' : 'border-border bg-surface-2 text-muted hover:text-text')}
+            aria-pressed={isProtecting(value)}
+            className={'ml-auto rounded-md border px-2 py-0.5 text-xs font-medium ' + (isProtecting(value) ? 'border-emerald-400 bg-emerald-500/25 text-emerald-100 ring-1 ring-white/30' : 'border-border bg-surface-2 text-muted hover:text-text')}
           >
-            🛡 {t.protect}
+            🛡 {t.protect}{!value.protect && isProtecting(value) ? ` (${t.protectViaMove})` : ''}
           </button>
         </div>
       </div>
@@ -223,20 +224,11 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Field label={t.status}>
-          <select className="input" value={value.status} onChange={(e) => set('status', e.target.value as StatusKey)}>
-            {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
-          </select>
-        </Field>
-        <Field label={`${t.hp} (${Math.round((stats.hp * value.curHPPercent) / 100)} / ${stats.hp})`}>
-          <div className="flex items-center gap-2">
-            <input type="range" min={1} max={100} value={value.curHPPercent} onChange={(e) => set('curHPPercent', Number(e.target.value))} className="flex-1 accent-accent" />
-            <input type="number" min={1} max={100} value={value.curHPPercent} onChange={(e) => set('curHPPercent', Math.max(1, Math.min(100, e.target.valueAsNumber || 100)))} className="w-16 rounded border border-border bg-surface-2 px-1 py-0.5 text-center" />
-            <span className="text-xs text-muted">%</span>
-          </div>
-        </Field>
-      </div>
+      <Field label={t.status}>
+        <select className="input" value={value.status} onChange={(e) => set('status', e.target.value as StatusKey)}>
+          {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
+        </select>
+      </Field>
 
       {picker?.kind === 'move' && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(picker.slot, m); setPicker(null) }} onClose={() => setPicker(null)} />
@@ -271,8 +263,8 @@ function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role
   const learnable = !move || canLearn(species, move)
   const ring = active ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-border bg-surface-2 hover:border-muted'
   return (
-    <div className={'flex items-center gap-1 rounded-md border pl-2 pr-1 py-1 text-sm ' + ring}>
-      <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+    <div className={'flex items-center gap-1 rounded-md border pl-2 pr-1 py-1 text-sm ' + ring} title={t.dblClickHint}>
+      <button type="button" onClick={onSelect} onDoubleClick={onEdit} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         {info ? (
           <>
             <TypeBadge type={info.type} lang={lang} small />

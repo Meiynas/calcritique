@@ -8,6 +8,19 @@ interface Particle {
   x: number; y: number; vx: number; vy: number; size: number; life: number; maxLife: number; rot: number; vr: number; hue: number
 }
 
+// Position (en % de l'écran), taille et couleur des hexagones d'artefact, alignés sur la diagonale du soleil (86 %, -6 %)
+const FLARE_HEXES = [
+  { x: 78, y: 8, size: 14, color: 'rgba(255, 255, 240, 0.55)' },
+  { x: 70, y: 18, size: 40, color: 'rgba(253, 224, 71, 0.22)' },
+  { x: 63, y: 27, size: 22, color: 'rgba(255, 200, 120, 0.30)' },
+  { x: 55, y: 38, size: 70, color: 'rgba(251, 146, 60, 0.14)' },
+  { x: 48, y: 47, size: 30, color: 'rgba(134, 239, 172, 0.22)' },
+  { x: 40, y: 57, size: 110, color: 'rgba(255, 210, 120, 0.10)' },
+  { x: 33, y: 66, size: 18, color: 'rgba(255, 255, 255, 0.35)' },
+  { x: 24, y: 78, size: 56, color: 'rgba(147, 197, 253, 0.16)' },
+  { x: 15, y: 90, size: 34, color: 'rgba(244, 114, 182, 0.16)' },
+]
+
 interface Bolt { pts: [number, number][]; life: number; maxLife: number }
 
 export default function FxLayer({ field }: { field: FieldState }) {
@@ -175,7 +188,13 @@ export default function FxLayer({ field }: { field: FieldState }) {
       {field.terrain && <div className={'fx-terrain fx-terrain-' + field.terrain.toLowerCase()} />}
       {field.terrain === 'Misty' && <div className="fx-mist" />}
       {field.weather === 'Sun' && <div className="fx-sun" />}
-      {field.weather === 'Sun' && <div className="fx-flare" />}
+      {field.weather === 'Sun' && (
+        <div className="fx-flare">
+          {FLARE_HEXES.map((h, i) => (
+            <div key={i} className="fx-hex" style={{ left: `${h.x}%`, top: `${h.y}%`, width: h.size, height: h.size, background: h.color }} />
+          ))}
+        </div>
+      )}
       {field.weather === 'Rain' && <div className="fx-raintint" />}
       {field.weather === 'Sand' && <div className="fx-sandtint" />}
       {field.weather === 'Snow' && <div className="fx-snowtint" />}

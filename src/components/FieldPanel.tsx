@@ -100,7 +100,7 @@ function ChoiceRow<T extends string>({ label, choices, value, names, styles, onP
             <button
               key={c}
               type="button"
-              onClick={() => onPick(c)}
+              onClick={() => onPick(active && c ? ('' as T) : c)}
               className={'rounded-md border px-2 py-1 text-xs font-medium transition ' + (active ? style + ' ring-1 ring-white/40' : 'border-border bg-surface-2 text-muted hover:text-text')}
             >
               {c ? ICON[c] + ' ' : ''}{names[c]}

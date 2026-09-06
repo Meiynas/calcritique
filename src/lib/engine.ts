@@ -236,7 +236,7 @@ export function computeMove(
   // Abri : bloque tout sauf les attaques qui le percent (Ruse...) ou Poing Invisible sur une attaque de contact
   let blockedByProtect = false
   let protectBypass: MoveResult['protectBypass']
-  if (defenderState.protect && info.category !== 'Status') {
+  if (isProtecting(defenderState) && info.category !== 'Status') {
     if (info.breaksProtect) protectBypass = 'feint'
     else if (attacker.hasAbility('Unseen Fist') && info.flags?.contact) protectBypass = 'unseenFist'
     else blockedByProtect = true
@@ -319,9 +319,15 @@ export function computeMove(
 export interface SpeedInfo {
   attacker: number
   defender: number
-  /** -1 attaquant plus lent, 0 égalité, 1 attaquant plus rapide (Distorsion prise en compte) */
+  /** Qui agit en premier : -1 le défenseur, 0 égalité, 1 l'attaquant (priorité puis vitesse, Distorsion prise en compte) */
   winner: -1 | 0 | 1
+  /** Verdict sur la vitesse seule */
+  speedWinner: -1 | 0 | 1
   ratio: number // vitesse attaquant / vitesse défenseur
+  attackerPriority: number
+  defenderPriority: number
+  attackerMove: string
+  defenderMove: string
 }
 
 const BOOST: Record<number, number> = { [-6]: 2 / 8, [-5]: 2 / 7, [-4]: 2 / 6, [-3]: 2 / 5, [-2]: 2 / 4, [-1]: 2 / 3, 0: 1, 1: 1.5, 2: 2, 3: 2.5, 4: 3, 5: 3.5, 6: 4 }
@@ -342,6 +348,28 @@ export function effectiveSpeed(p: Pokemon, state: PokemonState, side: SideState,
   return spe
 }
 
+/** Attaques qui protègent (Abri et ses variantes). */
+export const PROTECT_MOVES = ['Protect', 'Detect', 'Spiky Shield', 'Baneful Bunker', 'Burning Bulwark', "King's Shield", 'Obstruct', 'Silk Trap', 'Max Guard']
+
+/** Le Pokémon protège-t-il ce tour ? (case Abri cochée, ou attaque mise en avant = Abri) */
+export function isProtecting(p: PokemonState): boolean {
+  return !!p.protect || PROTECT_MOVES.includes(p.moves[p.activeMove ?? 0] ?? '')
+}
+
+/** Priorité d'une attaque pour ce Pokémon (Farceur, Ailes Bourrasque, Triage...). */
+export function movePriority(p: PokemonState, moveName: string, curHPFull = true): number {
+  if (!moveName) return 0
+  const info = gen.moves.get(toID(moveName))
+  if (!info) return 0
+  let prio = EXTRA.moves[moveName]?.prio ?? info.priority ?? 0
+  const mon = buildPokemon(p)
+  if (mon.hasAbility('Prankster') && info.category === 'Status') prio += 1
+  if (mon.hasAbility('Gale Wings') && info.type === 'Flying' && curHPFull) prio += 1
+  if (mon.hasAbility('Triage') && info.drain) prio += 3
+  if (moveName === 'Grassy Glide') prio += 0 // géré par le terrain ci-dessous
+  return prio
+}
+
 export function speedInfo(a: PokemonState, d: PokemonState, f: FieldState, attackerSide: SideKey = 'left'): SpeedInfo | null {
   if (!a.species || !d.species || !gen.species.get(toID(a.species)) || !gen.species.get(toID(d.species))) return null
   const pa = buildPokemon(a)
@@ -350,7 +378,14 @@ export function speedInfo(a: PokemonState, d: PokemonState, f: FieldState, attac
   const sd = effectiveSpeed(pd, d, f[attackerSide === 'left' ? 'right' : 'left'], f)
   let winner: -1 | 0 | 1 = sa === sd ? 0 : sa > sd ? 1 : -1
   if (f.trickRoom && winner !== 0) winner = winner === 1 ? -1 : 1
-  return { attacker: sa, defender: sd, winner, ratio: sd === 0 ? 99 : sa / sd }
+  const am = a.moves[a.activeMove ?? 0] ?? ''
+  const dm = d.moves[d.activeMove ?? 0] ?? ''
+  let pa1 = movePriority(a, am, a.curHPPercent >= 100)
+  let pd1 = movePriority(d, dm, d.curHPPercent >= 100)
+  if (f.terrain === 'Grassy') { if (am === 'Grassy Glide') pa1 += 1; if (dm === 'Grassy Glide') pd1 += 1 }
+  const byPriority: -1 | 0 | 1 = pa1 === pd1 ? 0 : pa1 > pd1 ? 1 : -1
+  const finalWinner = byPriority !== 0 ? byPriority : winner
+  return { attacker: sa, defender: sd, winner: finalWinner, speedWinner: winner, ratio: sd === 0 ? 99 : sa / sd, attackerPriority: pa1, defenderPriority: pd1, attackerMove: am, defenderMove: dm }
 }
 
 export function finalStats(p: PokemonState): Record<StatKey, number> {
