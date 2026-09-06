@@ -240,8 +240,8 @@ export function damageRange(
   try {
     const r = calculate(gen, attacker, defender, move, field)
     const [min, max] = r.range()
-    const acc = EXTRA.moves[moveName]?.acc
-    return { min, max, maxHP: defender.maxHP(), curHP: defender.curHP(), accuracy: acc === undefined ? 100 : acc }
+    const acc = effectiveAccuracy(moveName, attacker, defender, field, attackerState.accStage ?? 0, defenderState.evaStage ?? 0)
+    return { min, max, maxHP: defender.maxHP(), curHP: defender.curHP(), accuracy: acc.base === null ? null : acc.effective }
   } catch {
     return null
   }

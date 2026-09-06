@@ -12,16 +12,23 @@ import { SPRITES } from './Tooltips'
 
 interface Props { state: AppState; lang: Lang; onClose: () => void }
 
+/** Attaques sur 2 tours (charge ou semi-invulnérabilité) et attaques à recharge : écartées si l'option est cochée */
+const TWO_TURN_MOVES = new Set([
+  'Fly', 'Dig', 'Dive', 'Bounce', 'Phantom Force', 'Shadow Force', 'Sky Attack', 'Solar Beam', 'Solar Blade', 'Skull Bash', 'Razor Wind',
+  'Freeze Shock', 'Ice Burn', 'Geomancy', 'Meteor Beam', 'Electro Shot', 'Sky Drop', 'Hyper Beam', 'Giga Impact', 'Blast Burn', 'Hydro Cannon',
+  'Frenzy Plant', 'Rock Wrecker', 'Roar of Time', 'Prismatic Laser', 'Eternabeam',
+])
+
 interface Cell { move: string; ohko: number; twohko: number; maxPct: number; minPct: number; r: MoveResult; inKit: boolean }
 
-function bestCell(atk: PokemonState, def: PokemonState, state: AppState, side: SideKey, includeAll: boolean): Cell | null {
+function bestCell(atk: PokemonState, def: PokemonState, state: AppState, side: SideKey, includeAll: boolean, noTwoTurn: boolean): Cell | null {
   const battle = { gameType: state.mode === '1v1' ? ('Singles' as const) : ('Doubles' as const), targetCount: 1 }
   const kit = atk.moves.filter(Boolean)
   let candidates = kit
   if (includeAll) {
     // Tout le learnset : présélection rapide (fourchette de dégâts) des 6 attaques qui frappent le plus fort, puis calcul complet
     const ranked = learnset(atk.species)
-      .filter((m) => { const i = moveInfo(m); return i && i.category !== 'Status' && i.basePower > 0 })
+      .filter((m) => { const i = moveInfo(m); return i && i.category !== 'Status' && i.basePower > 0 && !(noTwoTurn && TWO_TURN_MOVES.has(m)) })
       .map((m) => ({ m, r: damageRange(m, atk, def, state.field, side, battle) }))
       .filter((x) => x.r && x.r.max > 0)
       .sort((a, b) => b.r!.min - a.r!.min || b.r!.max - a.r!.max)
@@ -56,10 +63,11 @@ export default function MatrixModal({ state, lang, onClose }: Props) {
   const t = dict(lang)
   const [dir, setDir] = useState<SideKey>('left')
   const [includeAll, setIncludeAll] = useState(false)
+  const [noTwoTurn, setNoTwoTurn] = useState(true)
   const attackers = state.teams[dir].map((p, i) => ({ p, i })).filter(({ p }) => p.species && speciesInfo(p.species))
   const foe: SideKey = dir === 'left' ? 'right' : 'left'
   const defenders = state.teams[foe].map((p, i) => ({ p, i })).filter(({ p }) => p.species && speciesInfo(p.species))
-  const grid = useMemo(() => attackers.map(({ p: a }) => defenders.map(({ p: d }) => bestCell(a, d, state, dir, includeAll))), [attackers, defenders, state, dir, includeAll])
+  const grid = useMemo(() => attackers.map(({ p: a }) => defenders.map(({ p: d }) => bestCell(a, d, state, dir, includeAll, noTwoTurn))), [attackers, defenders, state, dir, includeAll, noTwoTurn])
 
   return (
     <Modal title={t.matrix} onClose={onClose} wide>
@@ -73,6 +81,12 @@ export default function MatrixModal({ state, lang, onClose }: Props) {
           <input type="checkbox" checked={includeAll} onChange={(e) => setIncludeAll(e.target.checked)} />
           {t.matrixAll}
         </label>
+        {includeAll && (
+          <label className="flex items-center gap-1" title={t.matrixNoTwoTurnHint}>
+            <input type="checkbox" checked={noTwoTurn} onChange={(e) => setNoTwoTurn(e.target.checked)} />
+            {t.matrixNoTwoTurn}
+          </label>
+        )}
         <span className="basis-full text-muted">{t.matrixHint}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3">

@@ -315,6 +315,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
               onEdit={() => setPicker({ kind: 'move', slot: i })}
               onClear={() => setMove(i, '')}
               role={role}
+              noGuard={value.ability === 'No Guard'}
             />
           ))}
         </div>
@@ -385,6 +386,7 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
             onEdit={() => setSlot(i)}
             onClear={() => setMove(i, '')}
             role={role}
+            noGuard={value.ability === 'No Guard'}
           />
         ))}
       </div>
@@ -512,12 +514,14 @@ function UsageTag({ pct }: { pct?: number }) {
   return <span className="ml-2 text-[10px] text-emerald-300">{pct}%</span>
 }
 
-function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role }: {
-  move: string; species: string; active: boolean; lang: Lang; onSelect: () => void; onEdit: () => void; onClear: () => void; role: 'attacker' | 'defender'
+function MoveSlot({ move, species, active, lang, onSelect, onEdit, onClear, role, noGuard }: {
+  move: string; species: string; active: boolean; lang: Lang; onSelect: () => void; onEdit: () => void; onClear: () => void; role: 'attacker' | 'defender'; noGuard?: boolean
 }) {
   const t = dict(lang)
   const info = move ? moveInfo(move) : undefined
-  const extra = move ? EXTRA.moves[move] : undefined
+  const extra0 = move ? EXTRA.moves[move] : undefined
+  // Annule Garde : tout touche à 100 %
+  const extra = extra0 && noGuard && extra0.acc !== null ? { ...extra0, acc: 100 } : extra0
   const pct = move ? usagePercent(species, 'moves', move) : undefined
   const learnable = !move || canLearn(species, move)
   const ring = active ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-border bg-surface-2 hover:border-muted'
