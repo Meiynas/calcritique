@@ -23,8 +23,13 @@ try {
 }
 const season = index.battleDataFolders?.[0] ?? 'Current'
 const date = (index.generatedAt ?? new Date().toISOString()).slice(0, 10)
-const list = (index.pokemon ?? []).filter((p) => (p.battleDataCsvs ?? []).some((c) => String(c).includes('Doubles')))
-console.error(`${list.length} Pokémon avec des données Doubles (saison ${season}, ${date})`)
+// battleDataCsvs peut contenir des chaînes ou des objets : on garde les Pokémon dont une entrée mentionne "Doubles",
+// et à défaut (format inconnu) tous les Pokémon de l'index.
+const hasDoubles = (p) => (p.battleDataCsvs ?? []).some((c) => JSON.stringify(c).includes('Doubles'))
+let list = (index.pokemon ?? []).filter(hasDoubles)
+if (list.length === 0) list = index.pokemon ?? []
+console.error(`${list.length} Pokémon dans l'index (saison ${season}, ${date})`)
+let firstError = ''
 
 const data = {}
 let done = 0
@@ -36,8 +41,10 @@ for (const p of list) {
     rows = (await getJSON(`${BASE}/api/battle/Doubles/${encodeURIComponent(name)}`)).rows ?? []
   } catch (e) {
     console.error(`  ! ${name}: ${e.message}`)
+    if (!firstError) firstError = `${name}: ${e.message}`
     continue
   }
+  if (rows.length === 0) continue
   const pick = (cat) => rows.filter((r) => r.category === cat).sort((a, b) => a.rank - b.rank)
   const pairs = (cat) => pick(cat).slice(0, LIMIT).map((r) => [r.name, Number(r.percentage_value ?? 0)])
   data[key] = {
@@ -54,7 +61,7 @@ for (const p of list) {
   await new Promise((res) => setTimeout(res, 150)) // on ménage le serveur
 }
 
-if (Object.keys(data).length < 100) fail(`trop peu de Pokémon récupérés (${Object.keys(data).length}), fichier non modifié`)
+if (Object.keys(data).length < 100) fail(`trop peu de Pokémon récupérés (${Object.keys(data).length} sur ${list.length}), fichier non modifié. Première erreur : ${firstError || 'aucune'}`)
 // Ne pas écraser si rien n'a changé (évite les versions inutiles)
 let old = null
 try { old = JSON.parse(readFileSync(OUT, 'utf8')) } catch { /* pas de fichier */ }
