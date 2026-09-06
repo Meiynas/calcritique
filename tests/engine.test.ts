@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { computeMove, finalStats, speedInfo } from '../src/lib/engine'
 import { defaultPokemon, defaultField } from '../src/model'
 import { statAt50 } from '../src/lib/champions'
+import { switchIn } from '../src/lib/switch'
 
 const field = defaultField()
 const opts = { critMode: 'never' as const, useAccuracy: true, maxTurns: 2 }
@@ -90,4 +91,20 @@ test('stades : -1 esquive et +1 précision se compensent', () => {
   assert.equal(computeMove('Focus Blast', atk, def, field, opts)!.accuracy.effective, 70)
   const def2 = defaultPokemon('Kingambit', { evaStage: 0 })
   assert.ok(Math.abs(computeMove('Focus Blast', atk, def2, field, opts)!.accuracy.effective - 93.3) < 0.2)
+})
+
+test('switch : pièges sur Dracaufeu (Vol), Carchacrok (Sol) et Prédastérie (Poison)', () => {
+  const side = { ...field.left, stealthRock: true, spikes: 2, toxicSpikes: 1, stickyWeb: true }
+  const zard = switchIn(defaultPokemon('Charizard', { boosts: { hp: 0, atk: 2, def: 0, spa: 0, spd: 0, spe: 0 } }), side, field)
+  assert.equal(zard.pokemon.curHPPercent, 50) // Roche x4 : la moitié des PV
+  assert.equal(zard.pokemon.status, '') // pas au sol : Pics Toxik et Picots ignorés
+  assert.equal(zard.pokemon.boosts.atk, 0)
+  assert.equal(zard.pokemon.boosts.spe, 0)
+  const chomp = switchIn(defaultPokemon('Garchomp'), side, field)
+  assert.ok(chomp.pokemon.curHPPercent < 80 && chomp.pokemon.curHPPercent > 70) // 1/16 (Roche x0,5) + 1/6 (2 Picots)
+  assert.equal(chomp.pokemon.status, 'psn')
+  assert.equal(chomp.pokemon.boosts.spe, -1)
+  const pex = switchIn(defaultPokemon('Toxapex'), side, field)
+  assert.equal(pex.side.toxicSpikes, 0)
+  assert.equal(pex.pokemon.status, '')
 })

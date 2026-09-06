@@ -5,6 +5,8 @@ import type { Lang, PokemonState, SideKey, SideState } from '../model'
 import { emptyPokemon } from '../model'
 import { mostPlayedSet } from '../lib/usage'
 import { finalStats } from '../lib/engine'
+import { switchIn } from '../lib/switch'
+import type { FieldState } from '../model'
 import PokemonPicker from './PokemonPicker'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
@@ -22,12 +24,25 @@ interface Props {
   sideState: SideState
   onChangeSide: (s: SideState) => void
   isAttacker: boolean
+  field: FieldState
   lang: Lang
 }
 
-export default function TeamColumn({ side, team, selected, onSelect, onChangeTeam, sideState, onChangeSide, isAttacker, lang }: Props) {
+export default function TeamColumn({ side, team, selected, onSelect, onChangeTeam, sideState, onChangeSide, isAttacker, field, lang }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
+  const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
+  function doSwitch(i: number) {
+    const r = switchIn(team[i], sideState, field)
+    const next = [...team]
+    next[i] = r.pokemon
+    onChangeTeam(next)
+    if (r.side !== sideState) onChangeSide(r.side)
+    const notes = t.switchNotes as Record<string, string | ((n: number) => string)>
+    const lines = r.notes.map((n) => { const v = notes[n.key.replace('switch.', '')]; return typeof v === 'function' ? v(n.value ?? 0) : v })
+    setToast({ slot: i, lines: lines.length ? lines : [t.switchNotes.nothing] })
+    window.setTimeout(() => setToast((cur) => (cur && cur.slot === i ? null : cur)), 4000)
+  }
   const setSide = <K extends keyof SideState>(k: K, v: SideState[K]) => onChangeSide({ ...sideState, [k]: v })
   const setMon = (i: number, p: PokemonState) => {
     const next = [...team]
@@ -68,6 +83,8 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
             onClick={() => onSelect(i)}
             onDoubleClick={() => { onSelect(i); setPickSlot(i) }}
             onHP={(pct) => setMon(i, { ...p, curHPPercent: pct })}
+            onSwitch={() => doSwitch(i)}
+            toast={toast?.slot === i ? toast.lines : null}
             lang={lang}
             isAttacker={isAttacker}
           />
@@ -96,10 +113,12 @@ export default function TeamColumn({ side, team, selected, onSelect, onChangeTea
   )
 }
 
-function MonCard({ mon, active, onClick, onDoubleClick, onHP, lang, isAttacker }: {
-  mon: PokemonState; active: boolean; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; lang: Lang; isAttacker: boolean
+function MonCard({ mon, active, onClick, onDoubleClick, onHP, onSwitch, toast, lang, isAttacker }: {
+  mon: PokemonState; active: boolean; onClick: () => void; onDoubleClick: () => void; onHP: (pct: number) => void; onSwitch: () => void; toast: string[] | null; lang: Lang; isAttacker: boolean
 }) {
   const t = dict(lang)
+  const [editing, setEditing] = useState<null | 'hp' | 'pct'>(null)
+  const [draft, setDraft] = useState('')
   const sp = speciesInfo(mon.species)
   const ring = active ? (isAttacker ? 'border-accent ring-1 ring-accent/60' : 'border-sky-400 ring-1 ring-sky-400/60') : 'border-border hover:border-muted'
   if (!mon.species || !sp) {
@@ -124,7 +143,18 @@ function MonCard({ mon, active, onClick, onDoubleClick, onHP, lang, isAttacker }
     >
       <div className="flex items-center justify-between gap-1">
         <span className="truncate text-sm font-semibold">{label('species', mon.species, lang)}</span>
-        <span className="flex gap-0.5">{sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
+        <span className="flex items-center gap-0.5">
+          {sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}
+          <button
+            type="button"
+            title={t.switchInTitle}
+            onClick={(e) => { e.stopPropagation(); onSwitch() }}
+            onDoubleClick={(e) => e.stopPropagation()}
+            className="ml-1 rounded border border-border bg-surface-2 px-1.5 text-[11px] text-muted hover:border-accent hover:text-text"
+          >
+            ⇄
+          </button>
+        </span>
       </div>
       <div className="truncate text-[11px] text-muted">
         {mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}` : ''}
@@ -139,10 +169,44 @@ function MonCard({ mon, active, onClick, onDoubleClick, onHP, lang, isAttacker }
             title={t.hp}
           />
         </div>
-        <span className="w-16 text-right text-[10px] tabular-nums text-muted">{cur}/{maxHP} <span className="text-white/70">{mon.curHPPercent}%</span></span>
+        {editing ? (
+          <input
+            autoFocus
+            type="number"
+            min={1}
+            max={editing === 'hp' ? maxHP : 100}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit()
+              if (e.key === 'Escape') setEditing(null)
+            }}
+            onBlur={commit}
+            className="w-16 rounded border border-accent bg-surface-2 px-1 text-right text-[11px] tabular-nums text-text"
+          />
+        ) : (
+          <span className="w-20 text-right text-[10px] tabular-nums text-muted">
+            <button type="button" className="hover:text-text hover:underline" title={t.hp} onClick={() => { setDraft(String(cur)); setEditing('hp') }}>{cur}/{maxHP}</button>{' '}
+            <button type="button" className="text-white/70 hover:text-text hover:underline" title="%" onClick={() => { setDraft(String(mon.curHPPercent)); setEditing('pct') }}>{mon.curHPPercent}%</button>
+          </span>
+        )}
       </div>
+      {toast && (
+        <div className="mt-1 rounded bg-surface-2 px-1.5 py-1 text-[10px] leading-tight text-emerald-200">
+          {toast.map((l, i) => <div key={i}>{l}</div>)}
+        </div>
+      )}
     </div>
   )
+
+  function commit() {
+    const n = Number(draft)
+    if (Number.isFinite(n) && editing) {
+      const pct = editing === 'hp' ? Math.round((n / maxHP) * 100) : n
+      onHP(Math.max(1, Math.min(100, Math.round(pct))))
+    }
+    setEditing(null)
+  }
 }
 
 function HazardStrip({ value, onChange, lang }: { value: SideState; onChange: (s: SideState) => void; lang: Lang }) {

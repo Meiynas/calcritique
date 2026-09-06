@@ -196,7 +196,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
             aria-pressed={isProtecting(value)}
             className={'ml-auto rounded-md border px-2 py-0.5 text-xs font-medium ' + (isProtecting(value) ? 'border-emerald-400 bg-emerald-500/25 text-emerald-100 ring-1 ring-white/30' : 'border-border bg-surface-2 text-muted hover:text-text')}
           >
-            🛡 {t.protect}{!value.protect && isProtecting(value) ? ` (${t.protectViaMove})` : ''}
+            🛡 {t.protect}
           </button>
         </div>
       </div>

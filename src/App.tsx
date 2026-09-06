@@ -57,6 +57,7 @@ export default function App() {
       sideState={state.field[side]}
       onChangeSide={(ss) => setState((s) => ({ ...s, field: { ...s.field, [side]: ss } }))}
       isAttacker={state.attackerSide === side}
+      field={state.field}
       lang={state.lang}
     />
   )
