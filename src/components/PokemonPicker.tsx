@@ -5,7 +5,7 @@ import type { Lang, StatKey } from '../model'
 import { STAT_KEYS } from '../model'
 import { dict } from '../i18n'
 import { label, normalize } from '../lib/names'
-import { speciesInfo, TYPE_NAMES } from '../lib/engine'
+import { EXTRA, megaAbility, speciesInfo, TYPE_NAMES } from '../lib/engine'
 import { canLearn, LEGAL_SPECIES, teammateScores, USAGE } from '../lib/usage'
 import Modal from './Modal'
 import TypeBadge from './TypeBadge'
@@ -19,6 +19,13 @@ interface Props {
   onClose: () => void
 }
 
+/** Talents possibles d'une espèce (PokéAPI), ou le talent imposé pour une Méga */
+function speciesAbilities(species: string): string[] {
+  const mega = megaAbility(species)
+  if (mega) return [mega]
+  return EXTRA.species[species]?.abilities ?? []
+}
+
 export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
   const t = dict(lang)
   const [query, setQuery] = useState('')
@@ -27,6 +34,9 @@ export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
   const [minStats, setMinStats] = useState<Partial<Record<StatKey, number>>>({})
   const [moveGroups, setMoveGroups] = useState<string[][]>([])
   const [draft, setDraft] = useState('')
+  // Talents requis : plusieurs groupes "ET", chaque groupe = un talent OU un autre
+  const [abilityGroups, setAbilityGroups] = useState<string[][]>([])
+  const [abilityDraft, setAbilityDraft] = useState('')
 
   const suggestions = useMemo(() => teammateScores(team.filter(Boolean)), [team])
   const teamSet = new Set(team.filter(Boolean))
@@ -47,6 +57,10 @@ export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
     for (const group of moveGroups) {
       if (group.length && !group.some((m) => canLearn(species, m))) return false
     }
+    const abilities = speciesAbilities(species)
+    for (const group of abilityGroups) {
+      if (group.length && !group.some((a) => abilities.includes(a))) return false
+    }
     return true
   }
 
@@ -62,6 +76,13 @@ export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
   }
   function removeFromGroup(gi: number, move: string) {
     setMoveGroups((gs) => gs.map((g, i) => (i === gi ? g.filter((m) => m !== move) : g)).filter((g) => g.length > 0))
+  }
+  function addAbility(gi: number, ability: string) {
+    if (!ability) return
+    setAbilityGroups((gs) => gs.map((g, i) => (i === gi && !g.includes(ability) ? [...g, ability] : g)))
+  }
+  function removeAbility(gi: number, ability: string) {
+    setAbilityGroups((gs) => gs.map((g, i) => (i === gi ? g.filter((a) => a !== ability) : g)).filter((g) => g.length > 0))
   }
 
   return (
@@ -106,6 +127,24 @@ export default function PokemonPicker({ team, lang, onPick, onClose }: Props) {
           ))}
           <div className="flex items-center gap-1">
             <SearchSelect kind="moves" value={draft} onChange={(m) => { if (m) { setMoveGroups((gs) => [...gs, [m]]); setDraft('') } }} lang={lang} placeholder={t.addRequiredMove} className="w-44" />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">{t.requiredAbilities} :</span>
+          {abilityGroups.map((g, gi) => (
+            <span key={gi} className="flex items-center gap-1 rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-xs">
+              {g.map((a, ai) => (
+                <span key={a} className="flex items-center gap-1">
+                  {ai > 0 && <span className="font-semibold text-accent">{t.or}</span>}
+                  <span>{label('abilities', a, lang)}</span>
+                  <button type="button" onClick={() => removeAbility(gi, a)} className="text-muted hover:text-text">×</button>
+                </span>
+              ))}
+              <SearchSelect kind="abilities" value="" onChange={(a) => addAbility(gi, a)} lang={lang} placeholder={t.or + '…'} className="w-28" />
+            </span>
+          ))}
+          <div className="flex items-center gap-1">
+            <SearchSelect kind="abilities" value={abilityDraft} onChange={(a) => { if (a) { setAbilityGroups((gs) => [...gs, [a]]); setAbilityDraft('') } }} lang={lang} placeholder={t.addRequiredAbility} className="w-44" />
           </div>
         </div>
       </div>
