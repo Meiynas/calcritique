@@ -16,7 +16,7 @@ interface Props { state: AppState; lang: Lang; onClose: () => void }
 const TWO_TURN_MOVES = new Set([
   'Fly', 'Dig', 'Dive', 'Bounce', 'Phantom Force', 'Shadow Force', 'Sky Attack', 'Solar Beam', 'Solar Blade', 'Skull Bash', 'Razor Wind',
   'Freeze Shock', 'Ice Burn', 'Geomancy', 'Meteor Beam', 'Electro Shot', 'Sky Drop', 'Hyper Beam', 'Giga Impact', 'Blast Burn', 'Hydro Cannon',
-  'Frenzy Plant', 'Rock Wrecker', 'Roar of Time', 'Prismatic Laser', 'Eternabeam',
+  'Frenzy Plant', 'Rock Wrecker', 'Roar of Time', 'Prismatic Laser', 'Eternabeam', 'Focus Punch',
 ])
 
 interface Cell { move: string; ohko: number; twohko: number; maxPct: number; minPct: number; r: MoveResult; inKit: boolean }

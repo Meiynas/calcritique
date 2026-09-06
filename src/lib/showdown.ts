@@ -2,7 +2,7 @@
 // Export : noms anglais (standard), niveau 50, "EVs" = SP x 8 (le calc Showdown Champions les lit ainsi).
 // Import : noms anglais OU français, tolérance aux accents ; lignes "EVs:" (converties en SP = EV / 8) ou "SPs:" (directes).
 import type { PokemonState, StatKey } from '../model'
-import { defaultPokemon, STAT_KEYS } from '../model'
+import { defaultPokemon, normalizePokemon, STAT_KEYS } from '../model'
 import { NAMES, normalize, type NameKind } from './names'
 import { speciesInfo } from './engine'
 
@@ -124,7 +124,7 @@ function parseBlock(block: string, warnings: string[]): PokemonState | null {
       else warnings.push(`Nature inconnue : ${nat[1]}`)
     }
   }
-  return p
+  return normalizePokemon(p)
 }
 
 function resolveSpecies(text: string): string | null {

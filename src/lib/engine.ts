@@ -22,6 +22,18 @@ export function speciesInfo(name: string) {
   return gen.species.get(toID(name))
 }
 
+/** Talent imposé par une Méga-Évolution (une Méga a toujours un seul talent), sinon null. */
+export function megaAbility(species: string): string | null {
+  if (!species.includes('-Mega')) return null
+  const info = gen.species.get(toID(species))
+  return (info?.abilities as Record<string, string> | undefined)?.['0'] ?? null
+}
+
+/** Talent réellement actif : celui de la Méga si le Pokémon est méga-évolué. */
+export function effectiveAbility(p: PokemonState): string {
+  return megaAbility(p.species) ?? p.ability
+}
+
 export function moveInfo(name: string) {
   return gen.moves.get(toID(name))
 }
@@ -42,7 +54,7 @@ export function buildPokemon(p: PokemonState): Pokemon {
     nature: p.nature || 'Serious',
     evs,
     item: p.item || undefined,
-    ability: p.ability || undefined,
+    ability: effectiveAbility(p) || undefined,
     teraType: ((p.teraActive !== false && p.teraType) || undefined) as never,
     boosts: p.boosts,
     status: p.status,

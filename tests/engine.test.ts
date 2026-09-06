@@ -274,3 +274,14 @@ test('Showdown : import FR / EN avec EV -> SP, formes régionales, export relisi
   assert.deepEqual(again.team.map((p) => p.species), ['Kingambit', 'Ninetales-Alola'])
   assert.deepEqual(again.team[0].sp, r.team[0].sp)
 })
+
+test('Méga : le talent de la Méga est imposé (Méga-Roucarnage = Annule Garde, précision 100 %)', async () => {
+  const { mostPlayedSet } = await import('../src/lib/usage')
+  const { normalizePokemon } = await import('../src/model')
+  const mega = normalizePokemon(defaultPokemon('Pidgeot-Mega', { ability: 'Keen Eye', moves: ['Hurricane', '', '', ''] }))
+  assert.equal(mega.ability, 'No Guard')
+  const r = computeMove('Hurricane', mega, defaultPokemon('Garchomp'), field, opts)!
+  assert.equal(r.accuracy.effective, 100)
+  const auto = mostPlayedSet('Pidgeot')
+  if (auto.species === 'Pidgeot-Mega') assert.equal(auto.ability, 'No Guard')
+})

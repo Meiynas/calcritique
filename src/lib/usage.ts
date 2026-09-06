@@ -6,7 +6,7 @@ import { Pokemon, toID } from '@smogon/calc'
 import usageJson from '../data/usage.json'
 import learnsetsJson from '../data/learnsets.json'
 import { NAMES } from './names'
-import { speciesInfo, moveInfo } from './engine'
+import { speciesInfo, moveInfo, megaAbility } from './engine'
 import { emptyPokemon, type PokemonState, type StatKey } from '../model'
 import { Generations } from '@smogon/calc'
 
@@ -140,7 +140,7 @@ export function mostPlayedSet(species: string): PokemonState {
       /* pas de forme spéciale */
     }
   }
-  return { ...base, species: finalSpecies, nature, sp, item, ability, moves }
+  return { ...base, species: finalSpecies, nature, sp, item, ability: megaAbility(finalSpecies) ?? ability, moves }
 }
 
 /** Score de coéquipiers : pour chaque membre de l'équipe, ses 10 partenaires les plus fréquents (rang 1 = 10 points). */

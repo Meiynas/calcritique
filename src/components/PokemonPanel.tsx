@@ -4,7 +4,7 @@ import type { Lang, PokemonState, StatKey, StatusKey } from '../model'
 import { STAT_KEYS, SWITCH_IN } from '../model'
 import { dict } from '../i18n'
 import { label, NAMES } from '../lib/names'
-import { EXTRA, TYPE_NAMES, finalStats, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
+import { EXTRA, TYPE_NAMES, finalStats, megaAbility, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
 import { SP_MAX_STAT, SP_MAX_TOTAL, spTotal } from '../lib/champions'
 import { canLearn, mostPlayedSet, usageFor, usagePercent } from '../lib/usage'
 import { isProtecting } from '../lib/engine'
@@ -202,7 +202,11 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
           </button>
         </Field>
         <Field label={t.ability}>
-          <SearchSelect kind="abilities" value={value.ability} onChange={(v) => set('ability', v)} lang={lang} placeholder={t.searchAbility} suggested={abilities} allowEmpty emptyLabel={t.none} />
+          {megaAbility(value.species) ? (
+            <div className="input flex items-center justify-between text-muted" title={t.megaAbilityHint}><span className="text-text">{label('abilities', megaAbility(value.species)!, lang)}</span><span className="text-[10px]">Méga</span></div>
+          ) : (
+            <SearchSelect kind="abilities" value={value.ability} onChange={(v) => set('ability', v)} lang={lang} placeholder={t.searchAbility} suggested={abilities} allowEmpty emptyLabel={t.none} />
+          )}
         </Field>
       </div>
 

@@ -1,3 +1,4 @@
+import { megaAbility } from './lib/engine'
 // Modèle de données de Calcritique : ce que l'utilisateur règle à l'écran.
 // Tout est sérialisable (sauvegarde locale, liens partageables plus tard).
 
@@ -92,7 +93,7 @@ export function activeCount(mode: BattleMode): number {
 export const zeroStats = (): Record<StatKey, number> => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 })
 
 export function defaultPokemon(species: string, overrides: Partial<PokemonState> = {}): PokemonState {
-  return {
+  const out: PokemonState = {
     species,
     nature: 'Serious',
     sp: zeroStats(),
@@ -114,9 +115,17 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     target: null,
     ...overrides,
   }
+  return normalizePokemon(out)
 }
 
+
 export const emptyPokemon = (): PokemonState => defaultPokemon('')
+
+/** Une Méga-Évolution a toujours son talent propre (ex. Méga-Roucarnage : Annule Garde) : on l'impose. */
+export function normalizePokemon(p: PokemonState): PokemonState {
+  const forced = megaAbility(p.species)
+  return forced && p.ability !== forced ? { ...p, ability: forced } : p
+}
 
 export const defaultSide = (): SideState => ({
   reflect: false,
@@ -200,7 +209,7 @@ const STORAGE_KEY = 'calcritique.state.v4'
 function fixTeam(team: unknown): PokemonState[] {
   const arr = Array.isArray(team) ? (team as Partial<PokemonState>[]) : []
   const out: PokemonState[] = []
-  for (let i = 0; i < TEAM_SIZE; i++) out.push({ ...emptyPokemon(), ...(arr[i] ?? {}) })
+  for (let i = 0; i < TEAM_SIZE; i++) out.push(normalizePokemon({ ...emptyPokemon(), ...(arr[i] ?? {}) }))
   return out
 }
 

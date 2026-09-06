@@ -2,7 +2,7 @@
 // Stockage : localStorage du navigateur / de l'application (dans le logiciel Windows, c'est le dossier de données
 // de l'application : ça survit aux redémarrages et aux mises à jour). Export / import en fichier JSON pour sauvegarder.
 import type { PokemonState } from '../model'
-import { defaultPokemon } from '../model'
+import { defaultPokemon, normalizePokemon } from '../model'
 
 export interface SavedSet {
   id: string
@@ -39,7 +39,7 @@ function fixPokemon(p: unknown): PokemonState {
   out.protect = false
   out.leechSeed = false
   out.leechSeeder = null
-  return out
+  return normalizePokemon(out)
 }
 
 export function fixLibrary(raw: unknown): Library {
