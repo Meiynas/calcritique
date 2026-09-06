@@ -1,5 +1,6 @@
 // Infobulles au survol : attaque (nom, type, puissance, précision, description) et Pokémon (icône, stats de base, talents, Vitesse max).
 import { useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import type { Lang } from '../model'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
@@ -12,25 +13,30 @@ import spritesJson from '../data/sprites.json'
 const MOVEDESC = movedescJson as Record<string, { fr: string; en: string }>
 export const SPRITES = spritesJson as Record<string, string>
 
-/** Enveloppe qui affiche `tip` au survol (au-dessus ou en dessous selon la place). */
+/** Enveloppe qui affiche `tip` au survol. L'infobulle est rendue à la racine de la page (portal) en position fixe :
+    elle passe au-dessus de tout et n'hérite ni de la transparence ni du découpage (overflow) de son parent. */
 export function Hover({ tip, children, className }: { tip: ReactNode; children: ReactNode; className?: string }) {
-  const [open, setOpen] = useState(false)
-  const [below, setBelow] = useState(false)
-  // "truncate" (overflow hidden) irait couper l'infobulle : on le garde sur un span intérieur
-  const cls = (className ?? '').split(' ').filter(Boolean)
-  const truncate = cls.includes('truncate')
-  const outer = cls.filter((c) => c !== 'truncate').join(' ')
+  const [pos, setPos] = useState<{ x: number; y: number; below: boolean } | null>(null)
+  const show = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect()
+    const below = r.top < 260
+    setPos({ x: Math.max(8, Math.min(r.left, window.innerWidth - 300)), y: below ? r.bottom + 4 : r.top - 4, below })
+  }
   return (
     <span
-      className={'relative ' + outer}
-      onMouseEnter={(e) => { setBelow(e.currentTarget.getBoundingClientRect().top < 240); setOpen(true) }}
-      onMouseLeave={() => setOpen(false)}
+      className={'relative ' + (className ?? '')}
+      onMouseEnter={(e) => show(e.currentTarget)}
+      onMouseLeave={() => setPos(null)}
     >
-      {truncate ? <span className="block min-w-0 truncate">{children}</span> : children}
-      {open && (
-        <span className={'pointer-events-none absolute left-0 z-50 w-72 rounded-lg border border-border bg-surface p-2.5 text-left text-xs font-normal normal-case tracking-normal text-text shadow-xl ' + (below ? 'top-full mt-1' : 'bottom-full mb-1')}>
+      {children}
+      {pos && createPortal(
+        <span
+          className="pointer-events-none fixed z-[1000] w-72 rounded-lg border border-border bg-surface p-2.5 text-left text-xs font-normal normal-case tracking-normal text-text shadow-2xl"
+          style={{ left: pos.x, top: pos.y, transform: pos.below ? undefined : 'translateY(-100%)', opacity: 1 }}
+        >
           {tip}
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   )
@@ -73,7 +79,7 @@ export function PokemonTip({ species, lang }: { species: string; lang: Lang }) {
   const stats: [string, number][] = [[t.statNames.hp, bs.hp], [t.statNames.atk, bs.atk], [t.statNames.def, bs.def], [t.statNames.spa, bs.spa], [t.statNames.spd, bs.spd], [t.statNames.spe, bs.spe]]
   return (
     <span className="flex gap-2">
-      {sprite && <img src={sprite} alt="" className="h-14 w-16 shrink-0 object-contain object-top" style={{ imageRendering: 'pixelated' }} />}
+      {sprite && <img src={sprite} alt="" className="h-14 w-14 shrink-0 object-contain" style={{ imageRendering: 'pixelated' }} />}
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex items-center gap-1.5">
           <b className="text-sm">{label('species', species, lang)}</b>

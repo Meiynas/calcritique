@@ -246,6 +246,11 @@ Ajouté en v1.8.0 (retours du 6 septembre 2026, infobulles et Vampigraine) :
 - Étiquettes de type de largeur fixe dans les listes d'attaques (prop fixed de TypeBadge) pour aligner les noms. Cartes d'équipe : nom + icône sur la première ligne, objet et types sur la deuxième.
 - Vampigraine : la case s'appelle "Victime de Vampigraine". Quand elle est cochée, l'équipe adverse affiche "Poseur des Vampigraines de X" sur chaque fiche ; le Pokémon coché récupère les PV en fin de tour (champ leechSeeder = index dans l'équipe adverse ; sinon le premier adversaire vivant).
 
+Ajouté en v1.8.1 (retours du 6 septembre 2026) :
+- Infobulles rendues à la racine de la page (portal React, position fixe, z-index 1000) : plus de transparence héritée des cartes hors terrain (opacity-75) ni de passage sous les cartes voisines.
+- Icônes recadrées à la construction (scripts/build-sprites.py : suppression des marges transparentes, centrage dans un carré, réduction à 64 px max) : toutes les icônes ont la même taille apparente et sont centrées.
+- Bouton "Arrivée sur le terrain" : étiquette grise "SWITCH" (même largeur que les étiquettes de type) à la place de l'emoji porte.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -261,6 +266,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.8.1 : infobulles en portal (opaques, au-dessus de tout), icônes recadrées et centrées, étiquette SWITCH.
 - 2026-09-06 : v1.8.0 : infobulles attaques et Pokémon avec icônes embarquées et descriptions du jeu, étiquettes alignées, Vampigraine victime / poseur.
 - 2026-09-06 : v1.7.1 : légende des chances sous la barre avec "touche normalement", vrai taux de KO pondéré par la chance d'agir, libellés explicites.
 - 2026-09-06 : v1.7.0 : mode pièges, action "Arrivée sur le terrain" (pièges + talents d'entrée), drain / contrecoup / Orbe Vie / Baie Sitrus dans la timeline, effets de fin de tour, chance d'être apeuré affichée sur l'attaque de la cible.

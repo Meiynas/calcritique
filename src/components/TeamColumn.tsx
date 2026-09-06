@@ -233,7 +233,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
             })}
           </span>
           <Hover tip={<PokemonTip species={mon.species} lang={lang} />} className="flex min-w-0 items-center gap-1 truncate text-sm font-semibold">
-            {SPRITES[mon.species] && <img src={SPRITES[mon.species]} alt="" className="inline-block h-7 w-9 shrink-0 object-contain object-top align-middle" style={{ imageRendering: 'pixelated' }} />}
+            {SPRITES[mon.species] && <img src={SPRITES[mon.species]} alt="" className="inline-block h-7 w-7 shrink-0 object-contain align-middle" style={{ imageRendering: 'pixelated' }} />}
             {label('species', mon.species, lang)}
           </Hover>
         </span>

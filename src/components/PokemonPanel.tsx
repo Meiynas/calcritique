@@ -263,7 +263,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
           title={t.switchInHint}
           className={'mt-1 flex w-full items-center gap-2 rounded-md border px-2 py-1 text-sm ' + (value.activeMove === SWITCH_IN ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-dashed border-border bg-surface-2 text-muted hover:border-muted')}
         >
-          <span>🚪</span><span className="font-medium">{t.switchInAction}</span>
+          <span className="inline-flex w-16 justify-center rounded bg-stone-500 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-white">Switch</span><span className="font-medium">{t.switchInAction}</span>
         </button>
         {targetOptions && (
           <TargetChips value={value} options={targetOptions} onChange={(tg) => set('target', tg)} lang={lang} />
@@ -333,7 +333,7 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
           title={t.switchInHint}
           className={'mt-1 flex w-full items-center gap-2 rounded-md border px-2 py-1 text-sm ' + (value.activeMove === SWITCH_IN ? (role === 'attacker' ? 'border-accent bg-accent/10' : 'border-sky-400 bg-sky-400/10') : 'border-dashed border-border bg-surface-2 text-muted hover:border-muted')}
         >
-          <span>🚪</span><span className="font-medium">{t.switchInAction}</span>
+          <span className="inline-flex w-16 justify-center rounded bg-stone-500 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-white">Switch</span><span className="font-medium">{t.switchInAction}</span>
         </button>
       {targetOptions && <TargetChips value={value} options={targetOptions} onChange={(tg) => onChange({ ...value, target: tg })} lang={lang} />}
       <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">

@@ -139,7 +139,7 @@ function Row({ species, lang, onPick, note }: { species: string; lang: Lang; onP
   return (
     <button type="button" onClick={() => onPick(species)} className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-surface-2">
       <Hover tip={<PokemonTip species={species} lang={lang} />} className="flex w-40 shrink-0 items-center gap-1 truncate font-medium">
-        {SPRITES[species] && <img src={SPRITES[species]} alt="" className="inline-block h-8 w-10 shrink-0 object-contain object-top align-middle" style={{ imageRendering: 'pixelated' }} />}
+        {SPRITES[species] && <img src={SPRITES[species]} alt="" className="inline-block h-8 w-8 shrink-0 object-contain align-middle" style={{ imageRendering: 'pixelated' }} />}
         {label('species', species, lang)}
       </Hover>
       <span className="flex w-28 shrink-0 gap-0.5">{info.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
