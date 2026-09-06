@@ -313,6 +313,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.12.1 : matrice : case "Inclure les attaques hors kit" (présélection rapide par damageRange des 6 attaques du learnset qui frappent le plus fort, puis calcul complet ; attaques hors kit marquées d'une étoile).
 - 2026-09-06 : v1.12.0 : analyse par attaque (SP offensifs pour garantir un seuil, SP défensifs pour passer sous un seuil, autres attaques qui OHKO à coup sûr) et matrice équipe contre équipe dans les deux sens.
 - 2026-09-06 : v1.11.3 : "Les 2 équipes seulement" devient une case à cocher et n'affiche que les sets actuels des Pokémon en équipe (sans variantes).
 - 2026-09-06 : v1.11.2 : bouton "Les 2 équipes seulement" dans les speed tiers (n'affiche que les espèces des deux équipes, toutes variantes).

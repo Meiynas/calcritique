@@ -4,24 +4,38 @@ import { useMemo, useState } from 'react'
 import type { AppState, Lang, PokemonState, SideKey } from '../model'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
-import { computeMove, moveInfo, speciesInfo, type MoveResult } from '../lib/engine'
+import { computeMove, damageRange, moveInfo, speciesInfo, type MoveResult } from '../lib/engine'
+import { learnset } from '../lib/usage'
 import Modal from './Modal'
 import TypeBadge from './TypeBadge'
 import { SPRITES } from './Tooltips'
 
 interface Props { state: AppState; lang: Lang; onClose: () => void }
 
-interface Cell { move: string; ohko: number; twohko: number; maxPct: number; minPct: number; r: MoveResult }
+interface Cell { move: string; ohko: number; twohko: number; maxPct: number; minPct: number; r: MoveResult; inKit: boolean }
 
-function bestCell(atk: PokemonState, def: PokemonState, state: AppState, side: SideKey): Cell | null {
+function bestCell(atk: PokemonState, def: PokemonState, state: AppState, side: SideKey, includeAll: boolean): Cell | null {
+  const battle = { gameType: state.mode === '1v1' ? ('Singles' as const) : ('Doubles' as const), targetCount: 1 }
+  const kit = atk.moves.filter(Boolean)
+  let candidates = kit
+  if (includeAll) {
+    // Tout le learnset : présélection rapide (fourchette de dégâts) des 6 attaques qui frappent le plus fort, puis calcul complet
+    const ranked = learnset(atk.species)
+      .filter((m) => { const i = moveInfo(m); return i && i.category !== 'Status' && i.basePower > 0 })
+      .map((m) => ({ m, r: damageRange(m, atk, def, state.field, side, battle) }))
+      .filter((x) => x.r && x.r.max > 0)
+      .sort((a, b) => b.r!.min - a.r!.min || b.r!.max - a.r!.max)
+      .slice(0, 6)
+      .map((x) => x.m)
+    candidates = [...new Set([...kit, ...ranked])]
+  }
   let best: Cell | null = null
-  for (const m of atk.moves) {
-    if (!m) continue
+  for (const m of candidates) {
     const info = moveInfo(m)
     if (!info || info.category === 'Status') continue
-    const r = computeMove(m, atk, def, state.field, { ...state.options, critMode: 'chance', maxTurns: 2 }, side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: 1 })
+    const r = computeMove(m, atk, def, state.field, { ...state.options, critMode: 'chance', maxTurns: 2 }, side, battle)
     if (!r || r.max <= 0) continue
-    const cell: Cell = { move: m, ohko: r.koTrue[0] ?? 0, twohko: r.koTrue[1] ?? 0, maxPct: r.maxPct, minPct: r.minPct, r }
+    const cell: Cell = { move: m, ohko: r.koTrue[0] ?? 0, twohko: r.koTrue[1] ?? 0, maxPct: r.maxPct, minPct: r.minPct, r, inKit: kit.includes(m) }
     if (!best || cell.ohko > best.ohko || (cell.ohko === best.ohko && (cell.twohko > best.twohko || (cell.twohko === best.twohko && cell.maxPct > best.maxPct)))) best = cell
   }
   return best
@@ -41,10 +55,11 @@ const pct = (p: number) => (p >= 0.9995 ? '100' : p <= 0 ? '0' : (Math.round(p *
 export default function MatrixModal({ state, lang, onClose }: Props) {
   const t = dict(lang)
   const [dir, setDir] = useState<SideKey>('left')
+  const [includeAll, setIncludeAll] = useState(false)
   const attackers = state.teams[dir].map((p, i) => ({ p, i })).filter(({ p }) => p.species && speciesInfo(p.species))
   const foe: SideKey = dir === 'left' ? 'right' : 'left'
   const defenders = state.teams[foe].map((p, i) => ({ p, i })).filter(({ p }) => p.species && speciesInfo(p.species))
-  const grid = useMemo(() => attackers.map(({ p: a }) => defenders.map(({ p: d }) => bestCell(a, d, state, dir))), [attackers, defenders, state, dir])
+  const grid = useMemo(() => attackers.map(({ p: a }) => defenders.map(({ p: d }) => bestCell(a, d, state, dir, includeAll))), [attackers, defenders, state, dir, includeAll])
 
   return (
     <Modal title={t.matrix} onClose={onClose} wide>
@@ -54,7 +69,11 @@ export default function MatrixModal({ state, lang, onClose }: Props) {
             <button key={s} type="button" onClick={() => setDir(s)} className={'px-3 py-1 font-semibold ' + (dir === s ? (s === 'left' ? 'bg-accent text-white' : 'bg-sky-500 text-white') : 'text-muted hover:text-text')}>{s === 'left' ? t.matrixDir(t.team1) : t.matrixDir(t.team2)}</button>
           ))}
         </div>
-        <span className="text-muted">{t.matrixHint}</span>
+        <label className="flex items-center gap-1" title={t.matrixAllHint}>
+          <input type="checkbox" checked={includeAll} onChange={(e) => setIncludeAll(e.target.checked)} />
+          {t.matrixAll}
+        </label>
+        <span className="basis-full text-muted">{t.matrixHint}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
         {(attackers.length === 0 || defenders.length === 0) && <p className="text-sm text-muted">{t.typeChartEmpty}</p>}
@@ -90,7 +109,7 @@ export default function MatrixModal({ state, lang, onClose }: Props) {
                           <span className="flex flex-col items-center gap-0.5">
                             <span className="text-sm font-bold tabular-nums">{pct(c.ohko)} %</span>
                             <span className="text-[10px] opacity-80">2HKO {pct(c.twohko)} %</span>
-                            <span className="flex items-center gap-1 text-[10px]">{info && <TypeBadge type={info.type} lang={lang} small />}<span className="truncate">{label('moves', c.move, lang)}</span></span>
+                            <span className="flex items-center gap-1 text-[10px]">{info && <TypeBadge type={info.type} lang={lang} small />}<span className={'truncate ' + (c.inKit ? '' : 'italic underline decoration-dotted')} title={c.inKit ? '' : t.adviceNotInKit}>{label('moves', c.move, lang)}{c.inKit ? '' : ' *'}</span></span>
                             <span className="text-[10px] opacity-70">{Math.floor(c.minPct)}–{Math.floor(c.maxPct)} %</span>
                           </span>
                         ) : '·'}
