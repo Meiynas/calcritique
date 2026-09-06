@@ -62,6 +62,9 @@ export interface Hit {
   thawed?: boolean
   /** La cible devient confuse */
   confused?: boolean
+  /** Dégâts encaissés par le Clone de la cible, et Clone cassé par cette frappe */
+  subDamage?: number
+  subBroken?: boolean
   /** Baie Sitrus de la cible consommée après la frappe : PV rendus */
   sitrus?: number
   /** Aléas de cette frappe (0..1) : raté, critique, apeurer la cible (si elle joue après), statut infligé */
@@ -77,7 +80,7 @@ export interface ScenarioAction {
   /** Dégâts que le Pokémon s'inflige (confusion) */
   selfHit?: number
   /** Effet spécial de l'action (clé de traduction) */
-  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'sleep' | 'burn' | 'statusFail' | 'switchIn' | 'taunt' | 'confuse' | 'trickRoom'
+  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'sleep' | 'burn' | 'statusFail' | 'switchIn' | 'taunt' | 'confuse' | 'trickRoom' | 'tidyUp' | 'defog' | 'rapidSpin' | 'substitute'
   hits: Hit[]
   /** Notes d'entrée sur le terrain (pièges, talents) : clé de traduction + valeur + nom de cible éventuel */
   notes?: { key: string; value?: number; target?: Slot }[]
@@ -207,6 +210,8 @@ export function simulateTurn(state: AppState): TurnResult {
     const helping: Record<string, boolean> = {} // clé d'emplacement -> Coup d'Main reçu ce tour
     const flinched: Record<string, boolean> = {} // clé d'emplacement -> apeuré ce tour
     const taunted: Record<string, boolean> = {} // clé d'emplacement -> sous Provoc
+    const sub: Record<string, number> = {} // clé d'emplacement -> PV restants du Clone (0 = pas de Clone)
+    const bypassSub = (m: string, attacker: PokemonState) => !!moveInfo(m)?.flags?.sound || attacker.ability === 'Infiltrator'
     const sitrusUsed: Record<string, boolean> = {} // Baie Sitrus consommée
     const trySitrus = (k: string): number => {
       const cur = hp[k]
@@ -221,6 +226,7 @@ export function simulateTurn(state: AppState): TurnResult {
         const mon = buildPokemon(p)
         hp[slotKey(slot)] = { hp: mon.curHP(), maxHP: mon.maxHP(), fainted: false }
         mons[slotKey(slot)] = p
+        sub[slotKey(slot)] = p.substitute ? Math.floor(mon.maxHP() / 4) : 0
       }
     }
     const speedOf = (a: Action) => {
@@ -319,13 +325,36 @@ export function simulateTurn(state: AppState): TurnResult {
       }
       if (FIRST_TURN_ONLY.includes(action.move)) effect = 'firstTurnOnly'
       if (action.move === 'Trick Room') { field.trickRoom = !field.trickRoom; effect = 'trickRoom' }
+      // Grand Nettoyage : retire les pièges des deux côtés et TOUS les Clones, +1 Atq / Vit
+      if (action.move === 'Tidy Up') {
+        for (const sd of ['left', 'right'] as SideKey[]) field[sd] = { ...field[sd], stealthRock: false, spikes: 0, toxicSpikes: 0, stickyWeb: false }
+        for (const k of Object.keys(sub)) sub[k] = 0
+        mons[ak] = { ...mons[ak], boosts: { ...mons[ak].boosts, atk: Math.min(6, (mons[ak].boosts.atk ?? 0) + 1), spe: Math.min(6, (mons[ak].boosts.spe ?? 0) + 1) } }
+        effect = 'tidyUp'
+      }
+      if (action.move === 'Defog') {
+        for (const sd of ['left', 'right'] as SideKey[]) field[sd] = { ...field[sd], stealthRock: false, spikes: 0, toxicSpikes: 0, stickyWeb: false }
+        field[foe] = { ...field[foe], reflect: false, lightScreen: false, auroraVeil: false }
+        effect = 'defog'
+      }
+      if (action.move === 'Rapid Spin') {
+        field[side] = { ...field[side], stealthRock: false, spikes: 0, toxicSpikes: 0, stickyWeb: false }
+        mons[ak] = { ...mons[ak], boosts: { ...mons[ak].boosts, spe: Math.min(6, (mons[ak].boosts.spe ?? 0) + 1) } }
+        effect = 'rapidSpin'
+      }
+      if (action.move === 'Substitute' && !sub[ak] && hp[ak].hp > Math.floor(hp[ak].maxHP / 4)) {
+        const cost = Math.floor(hp[ak].maxHP / 4)
+        hp[ak] = { ...hp[ak], hp: hp[ak].hp - cost }
+        sub[ak] = cost
+        effect = 'substitute'
+      }
       // Provoc : la cible ne pourra plus utiliser d'attaque de statut (ce tour si elle joue après, et les suivants)
       if (action.move === 'Taunt') {
         const target = action.targets.find((tg) => !hp[slotKey(tg)]?.fainted)
         if (target) {
           const tk = slotKey(target)
           const tp = mons[tk]
-          const blocked = tp.protect || ['Oblivious', 'Aroma Veil', 'Good as Gold'].includes(tp.ability) || (target.side !== side && action.priority > 0 && guard[target.side].quick)
+          const blocked = tp.protect || ['Oblivious', 'Aroma Veil', 'Good as Gold'].includes(tp.ability) || (target.side !== side && action.priority > 0 && guard[target.side].quick) || (sub[tk] > 0 && !bypassSub(action.move, mons[ak]))
           if (!blocked) { taunted[tk] = true; effect = 'taunt' } else effect = 'statusFail'
         }
       }
@@ -335,7 +364,7 @@ export function simulateTurn(state: AppState): TurnResult {
         if (target) {
           const tk = slotKey(target)
           const tp = mons[tk]
-          const blocked = target.side !== side && (tp.protect || (action.priority > 0 && guard[target.side].quick))
+          const blocked = target.side !== side && (tp.protect || (action.priority > 0 && guard[target.side].quick) || (sub[tk] > 0 && !bypassSub(action.move, mons[ak])))
           const favorable = kind === 'best' ? ours : kind === 'worst' ? !ours : null
           const ch = blocked ? 0 : confusionChance(action.move, mons[ak], tp, field)
           if (ch >= 1 || (ch > 0 && (favorable === true || (favorable === null && ch >= 0.5)))) { mons[tk] = { ...tp, confused: true }; effect = 'confuse' } else effect = 'statusFail'
@@ -351,7 +380,7 @@ export function simulateTurn(state: AppState): TurnResult {
         if (target) {
           const tk = slotKey(target)
           const tp = mons[tk]
-          const blocked = target.side !== side && (tp.protect || (action.priority > 0 && guard[target.side].quick))
+          const blocked = target.side !== side && (tp.protect || (action.priority > 0 && guard[target.side].quick) || (sub[tk] > 0 && !bypassSub(action.move, mons[ak])))
           const sc = blocked ? null : statusChance(action.move, mons[ak], tp, field)
           if (sc && applies(sc.chance)) {
             mons[tk] = { ...tp, status: sc.status }
@@ -406,14 +435,30 @@ export function simulateTurn(state: AppState): TurnResult {
           }
           const crit = normal.critChance > 0 ? computeMove(action.move, attackerState, defender, f, { ...state.options, critMode: 'always' }, side, battle) : null
           const pick = pickDamage(kind, side === 'left', normal, crit)
-          const dmg = Math.min(cur.hp, pick.damage)
+          // Clone : encaisse les coups (sauf attaques sonores et Infiltrateur) ; une attaque multi-coups continue après l'avoir cassé
+          let subDamage = 0
+          let subBroken = false
+          let rolled = pick.damage
+          if (sub[tk] > 0 && !pick.missed && !bypassSub(action.move, attackerState)) {
+            const nHits = Math.max(1, normal.hits)
+            const perHit = rolled / nHits
+            if (rolled <= sub[tk]) { subDamage = rolled; sub[tk] -= rolled; rolled = 0 }
+            else {
+              const consumed = Math.min(nHits, Math.ceil(sub[tk] / Math.max(1, perHit)))
+              subDamage = sub[tk]
+              sub[tk] = 0
+              subBroken = true
+              rolled = Math.max(0, Math.round(perHit * (nHits - consumed)))
+            }
+          }
+          const dmg = Math.min(cur.hp, rolled)
           const after = cur.hp - dmg
           const ko = after <= 0
           let inflicted: InflictedStatus | undefined
           let thawed = false
           let flinch = false
           let confusedNow = false
-          if (!pick.missed && !ko) {
+          if (!pick.missed && !ko && !(subDamage > 0 && dmg === 0)) {
             if (mons[tk].status === 'frz' && thawsTarget(action.move)) { mons[tk] = { ...mons[tk], status: '' }; thawed = true }
             // Effet secondaire de statut (Plaquage 30 % para, Ébullition 30 % brûlure, Nuzzle 100 %...)
             const sc = statusChance(action.move, attackerState, mons[tk], field)
@@ -429,7 +474,7 @@ export function simulateTurn(state: AppState): TurnResult {
               if (fc >= 1 || (fc > 0 && favorable === true)) { flinched[tk] = true; flinch = true }
             }
           }
-          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, inflicted, flinched: flinch, thawed, confused: confusedNow })
+          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, inflicted, flinched: flinch, thawed, confused: confusedNow, subDamage: subDamage || undefined, subBroken: subBroken || undefined })
           hp[tk] = { hp: Math.max(0, after), maxHP: cur.maxHP, fainted: ko }
           if (!ko) { const sh = trySitrus(tk); if (sh > 0) sitrusHeals.push({ target, heal: sh }) }
           if (!pick.missed && dmg > 0) landed = true

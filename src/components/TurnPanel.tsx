@@ -154,6 +154,7 @@ function HitLine({ hit, name, lang, rich }: { hit: Hit; name: string; lang: Lang
       {hit.redirected && <span className="text-violet-300">↪ {t.redirected}</span>}
       {hit.blocked && <span className="text-emerald-300">🛡 {hit.blockedBy === 'wideGuard' ? t.effects.wideGuard : hit.blockedBy === 'quickGuard' ? t.effects.quickGuard : t.blockedByProtect}</span>}
       {!hit.blocked && hit.missed && <span className="text-orange-300">{t.missed}</span>}
+      {!hit.blocked && !hit.missed && hit.subDamage && <span className="text-slate-300">🪆 {t.subHit(hit.subDamage)}{hit.subBroken ? ` · ${t.subBroken}` : ''}</span>}
       {!hit.blocked && !hit.missed && (
         <>
           <span className={'font-semibold tabular-nums ' + (hit.ko ? 'text-accent' : '')}>−{pct}%</span>

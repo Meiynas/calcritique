@@ -196,6 +196,8 @@ export interface MoveResult {
   category: 'Physical' | 'Special' | 'Status'
   type: string
   basePower: number
+  /** Nombre de coups (attaques multi-coups), 1 sinon */
+  hits: number
   spread: boolean
   min: number
   max: number
@@ -230,6 +232,16 @@ export function critChanceFor(moveName: string, attacker: Pokemon, extraStage = 
   return [1 / 24, 1 / 8, 1 / 2, 1][Math.min(3, stage)]
 }
 
+/** Nombre de coups d'une attaque multi-coups pour le calcul : Dé Pipé garantit au moins 4 coups (2-5 coups et Bombe Pop),
+    Multi-Coups en fait toujours 5 (déjà géré par le moteur). undefined = valeur par défaut du moteur (3 pour 2-5 coups). */
+export function multiHitCount(moveName: string, attackerState: PokemonState): number | undefined {
+  const info = gen.moves.get(toID(moveName))
+  if (!info || !info.multihit) return undefined
+  const range = Array.isArray(info.multihit) ? info.multihit : [info.multihit, info.multihit]
+  if (attackerState.item === 'Loaded Dice' && effectiveAbility(attackerState) !== 'Skill Link' && range[1] >= 5) return moveName === 'Population Bomb' ? 4 : 4
+  return undefined
+}
+
 /** Fourchette de dégâts rapide (un seul calcul, sans critique ni distribution) : pour les analyses en boucle. */
 export function damageRange(
   moveName: string,
@@ -248,7 +260,8 @@ export function damageRange(
   const field = buildField(fieldState, attackerSide, gameType)
   const isSpreadMove = info.target === 'allAdjacentFoes' || info.target === 'allAdjacent'
   const singleTarget = gameType === 'Doubles' && isSpreadMove && (battle.targetCount ?? 2) <= 1
-  const move = new Move(gen, moveName, { ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit: false, ...(singleTarget ? { overrides: { target: 'normal' as const } } : {}) })
+  const hits = multiHitCount(moveName, attackerState)
+  const move = new Move(gen, moveName, { ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit: false, ...(hits ? { hits } : {}), ...(singleTarget ? { overrides: { target: 'normal' as const } } : {}) })
   try {
     const r = calculate(gen, attacker, defender, move, field)
     const [min, max] = r.range()
@@ -279,9 +292,10 @@ export function computeMove(
   const isSpreadMove = info.target === 'allAdjacentFoes' || info.target === 'allAdjacent'
   const singleTarget = gameType === 'Doubles' && isSpreadMove && (battle.targetCount ?? 2) <= 1
 
+  const hits = multiHitCount(moveName, attackerState)
   const run = (isCrit: boolean) => {
     const move = new Move(gen, moveName, {
-      ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit,
+      ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit, ...(hits ? { hits } : {}),
       ...(singleTarget ? { overrides: { target: 'normal' as const } } : {}),
     })
     return calculate(gen, attacker.clone(), defender.clone(), move, field.clone())
@@ -343,7 +357,7 @@ export function computeMove(
   if (blockedByProtect) {
     return {
       move: moveName, blockedByProtect, protectBypass,
-      category: (info.category ?? 'Status') as MoveResult['category'], type: normal.move.type, basePower: normal.rawDesc.moveBP ?? normal.move.bp,
+      category: (info.category ?? 'Status') as MoveResult['category'], type: normal.move.type, basePower: normal.rawDesc.moveBP ?? normal.move.bp, hits: normal.move.hits ?? 1,
       spread: false, min: 0, max: 0, minPct: 0, maxPct: 0, maxHP, curHP, accuracy: acc, critChance,
       koRollsOnly: koRollsOnly.map(() => 0), koTrue: koTrue.map(() => 0), desc: '', rolls: [], critMin: 0, critMax: 0, effectiveness,
     }
@@ -355,6 +369,7 @@ export function computeMove(
     protectBypass,
     category: (info.category ?? 'Status') as MoveResult['category'],
     type: normal.move.type,
+    hits: normal.move.hits ?? 1,
     basePower: normal.rawDesc.moveBP ?? normal.move.bp, // puissance réelle (Balayage, Noeud Herbe, Tacle Lourd... dépendent de la cible)
     spread: gameType === 'Doubles' && isSpreadMove && !singleTarget,
     min: dmin,

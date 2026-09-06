@@ -309,3 +309,33 @@ test('tour : Provoc bloque une attaque de statut jouée après, Farceur échoue 
   const r2 = simulateTurn(st)
   assert.equal(r2.scenarios.average.actions.find((a) => a.action.move === 'Taunt')!.skipped, 'prankster')
 })
+
+test('Clone : encaisse une attaque simple, une attaque multi-coups le casse et continue ; Dé Pipé = 4 coups ; Grand Nettoyage retire les Clones', async () => {
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { defaultState } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '2v2'
+  st.teams.left[0] = defaultPokemon('Cloyster', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, item: 'Loaded Dice', ability: 'Shell Armor', moves: ['Icicle Spear', '', '', ''], target: 0 })
+  st.teams.left[1] = defaultPokemon('Kingambit', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, moves: ['Kowtow Cleave', '', '', ''], target: 1 })
+  st.teams.right[0] = defaultPokemon('Garchomp', { substitute: true, moves: ['Protect', '', '', ''] })
+  st.teams.right[1] = defaultPokemon('Toxapex', { substitute: true, moves: ['Protect', '', '', ''] })
+  st.teams.right[0].moves[0] = 'Swords Dance'
+  st.teams.right[1].moves[0] = 'Toxic'
+  st.active = { left: [0, 1], right: [0, 1] }
+  const r = computeMove('Icicle Spear', st.teams.left[0], st.teams.right[0], field, opts)!
+  assert.equal(r.hits, 4) // Dé Pipé
+  const avg = simulateTurn(st).scenarios.average
+  const rb = avg.actions.find((a) => a.action.move === 'Icicle Spear')!
+  assert.ok(rb.hits[0].subBroken) // 4 coups : le Clone (25 %) casse et les coups restants touchent
+  assert.ok(rb.hits[0].damage > 0)
+  const kc = avg.actions.find((a) => a.action.move === 'Kowtow Cleave')!
+  assert.ok(kc.hits[0].subDamage! > 0)
+  assert.equal(kc.hits[0].damage, 0) // un seul coup : le Clone prend tout
+  // Grand Nettoyage retire les Clones avant les frappes
+  st.teams.left[0] = defaultPokemon('Maushold', { nature: 'Jolly', sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ['Tidy Up', '', '', ''] })
+  const avg2 = simulateTurn(st).scenarios.average
+  assert.equal(avg2.actions.find((a) => a.action.move === 'Tidy Up')!.effect, 'tidyUp')
+  const kc2 = avg2.actions.find((a) => a.action.move === 'Kowtow Cleave')!
+  assert.equal(kc2.hits[0].subDamage, undefined)
+  assert.ok(kc2.hits[0].damage > 0)
+})

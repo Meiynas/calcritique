@@ -35,6 +35,8 @@ export interface PokemonState {
   leechSeeder: number | null
   /** Confus (1 chance sur 3 de se blesser au lieu d'agir) */
   confused: boolean
+  /** Un Clone est en place (25 % des PV max, encaisse les coups à la place du Pokémon) */
+  substitute: boolean
   /** Cible de l'attaque mise en avant (2v2) : emplacement dans l'équipe adverse, ou allié ('ally'). null = cible par défaut */
   target: number | 'ally' | null
 }
@@ -115,6 +117,7 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     leechSeed: false,
     leechSeeder: null,
     confused: false,
+    substitute: false,
     target: null,
     ...overrides,
   }

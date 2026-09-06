@@ -40,6 +40,7 @@ function fixPokemon(p: unknown): PokemonState {
   out.leechSeed = false
   out.leechSeeder = null
   out.confused = false
+  out.substitute = false
   return normalizePokemon(out)
 }
 

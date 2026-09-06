@@ -309,6 +309,11 @@ Ajouté en v1.14.0 (6 septembre 2026) : Provoc, confusion, Farceur, Distorsion e
 - Farceur (Prankster) contre un type Ténèbres : toute attaque de statut visant un adversaire Ténèbres échoue ("Farceur contre un type Ténèbres : échoue"), en plus de l'immunité déjà gérée pour les statuts infligés.
 - Confusion : case "💫 Confus" à côté de "Victime de Vampigraine" (champ confused, volatile, remis à faux dans la bibliothèque). 1 chance sur 3 de se blesser (40 BP physique sans type sur sa propre Défense, boosts compris, roll médian) : meilleur scénario = l'adversaire se blesse, pire = nous, moyen = agit. Attaques qui rendent confus (CONFUSION_MOVES : Onde Folie, Vantardise, Flatterie, Ultrason, Doux Baiser, Danse-Folle à leur précision ; Dynamo-Poing 100 %, Vent Violent 30 %, Rafale Psy / Choc Mental 10 %, Uppercut / Vibraqua / Escalade 20 %, Vapeur Féérique 20 %, Hache Cassante 30 %) avec immunités (Tempo Perso, Terrain Brumeux au sol, Écran Poudre / Cape Cachée, Farceur vs Ténèbres, Corps en Or). La jauge "Chances" combine confusion et statut (reason 'confusion'). 18 tests.
 
+Ajouté en v1.15.0 (6 septembre 2026) : Clone, multi-coups, nettoyage.
+- Case "🪆 Clone" (champ substitute, volatile) à côté de Confus. Dans le tour : le Clone a 25 % des PV max ; il encaisse les frappes (sauf attaques sonores et Infiltrateur) ; une attaque simple qui le casse ne blesse pas le Pokémon ; une attaque multi-coups continue avec ses coups restants (dégâts par coup = total / nombre de coups) ; les attaques de statut (Cage Éclair, Provoc, Onde Folie...) échouent sur un Clone ; les effets secondaires ne s'appliquent pas si le Clone a tout pris. Affichage "🪆 Clone −N · Clone cassé". L'attaque Clone en cours de tour en pose un (coûte 25 % des PV).
+- Multi-coups : Dé Pipé (Loaded Dice) garantit 4 coups sur les attaques 2-5 coups et Bombe Pop (engine.multiHitCount, passé au moteur via l'option hits) ; Multi-Coups = 5 (déjà géré par le moteur). MoveResult.hits exposé.
+- Grand Nettoyage : retire les pièges des deux côtés et TOUS les Clones, +1 Atq / Vit au lanceur. Anti-Brume : pièges des deux côtés et murs adverses. Tour Rapide : pièges de son côté, +1 Vit. (Effets valables pour la suite du tour simulé.) 19 tests.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -324,6 +329,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.15.0 : Clone (case + mécanique dans le tour, multi-coups qui traversent), Dé Pipé, Grand Nettoyage / Anti-Brume / Tour Rapide.
 - 2026-09-06 : v1.14.0 : Provoc, confusion (case Confus + attaques qui confusent), Farceur contre Ténèbres, Distorsion posée en cours de tour.
 - 2026-09-06 : v1.13.4 : fenêtre "Choisir un Pokémon" : filtre par talents requis, avec des groupes OU comme pour les attaques (talents possibles d'après PokéAPI, talent imposé pour les Méga).
 - 2026-09-06 : v1.13.3 : matrice et conseils : les attaques à puissance variable (Balayage...) n'étaient pas candidates hors kit (filtre puissance > 0 sur des données à 0) ; filtre retiré.
