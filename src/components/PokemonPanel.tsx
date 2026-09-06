@@ -11,6 +11,7 @@ import { isProtecting } from '../lib/engine'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
 import { Hover, MoveTip } from './Tooltips'
+import type { SavedSet } from '../lib/library'
 import MovePicker from './MovePicker'
 import ItemPicker from './ItemPicker'
 import PokemonPicker from './PokemonPicker'
@@ -27,6 +28,9 @@ interface Props {
   onChange: (p: PokemonState) => void
   seeder?: Seeder
   onSaveSet?: (p: PokemonState, name: string) => void
+  /** Sets enregistrés dans la bibliothèque (pour "Mes sets") */
+  savedSets?: SavedSet[]
+  onSpeedTiers?: () => void
   onClear?: () => void
   /** Espèces de la même équipe (pour les suggestions de coéquipiers) */
   teamSpecies?: string[]
@@ -39,8 +43,10 @@ const NATURE_KEYS = Object.keys(NAMES.natures)
 const STATUSES: StatusKey[] = ['', 'brn', 'par', 'psn', 'tox', 'slp', 'frz']
 const STAGES = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
 
-export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang, seeder, onSaveSet }: Props) {
+export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang, seeder, onSaveSet, savedSets = [], onSpeedTiers }: Props) {
   const [saveName, setSaveName] = useState<string | null>(null)
+  const [showSets, setShowSets] = useState(false)
+  const mySets = savedSets.filter((s) => s.pokemon.species === value.species)
   const t = dict(lang)
   const species = speciesInfo(value.species)
   const stats = useMemo(() => finalStats(value), [value])
@@ -122,12 +128,29 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         <button type="button" onClick={() => onChange({ ...mostPlayedSet(value.species), activeMove: 0 })} title={t.applyMostPlayed} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
           ★ {t.applyMostPlayed}
         </button>
+        {savedSets.length > 0 && (
+          <button type="button" onClick={() => setShowSets((v) => !v)} title={t.libMySets} className={'rounded-md border px-2 py-1.5 text-xs ' + (showSets ? 'border-accent bg-accent/20 text-text' : 'border-border bg-surface-2 text-muted hover:border-accent hover:text-text')}>
+            📂 {mySets.length}
+          </button>
+        )}
         {onSaveSet && (
           <button type="button" onClick={() => setSaveName(`${label('species', value.species, lang)}${value.item ? ' ' + label('items', value.item, lang) : ''}`)} title={t.libSaveSet} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
             💾
           </button>
         )}
       </div>
+      {showSets && (
+        <div className="flex flex-col gap-1 rounded-md border border-border bg-surface-2 p-2 text-xs">
+          <span className="text-muted">{t.libMySetsFor(label('species', value.species, lang))}</span>
+          {mySets.length === 0 && <span className="text-muted">{t.libNoSetFor}</span>}
+          {mySets.map((s) => (
+            <button key={s.id} type="button" onClick={() => { onChange({ ...s.pokemon, activeMove: 0 }); setShowSets(false) }} className="flex items-center gap-2 rounded border border-border bg-surface px-2 py-1 text-left hover:border-accent">
+              <b>{s.name}</b>
+              <span className="text-muted">{s.pokemon.item ? label('items', s.pokemon.item, lang) : t.none} · {label('natures', s.pokemon.nature, lang)} · {s.pokemon.moves.filter(Boolean).map((m) => label('moves', m, lang)).join(', ')}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {saveName !== null && onSaveSet && (
         <form
           className="flex items-center gap-2 text-xs"
@@ -184,8 +207,13 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
       <div>
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.stats}</span>
-          <span className={'text-xs font-semibold ' + (over ? 'text-accent' : 'text-muted')}>
-            {t.spBudget} : {total} / {SP_MAX_TOTAL}
+          <span className="flex items-center gap-2">
+            {onSpeedTiers && (
+              <button type="button" onClick={onSpeedTiers} className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted hover:border-accent hover:text-text">⚡ {t.speedTiers}</button>
+            )}
+            <span className={'text-xs font-semibold ' + (over ? 'text-accent' : 'text-muted')}>
+              {t.spBudget} : {total} / {SP_MAX_TOTAL}
+            </span>
           </span>
         </div>
         {over && <div className="mb-1 rounded bg-accent/15 px-2 py-1 text-xs text-accent">{t.spOver}</div>}

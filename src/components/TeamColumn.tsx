@@ -14,6 +14,7 @@ import { speciesInfo } from '../lib/engine'
 import PokemonPanel, { MovesOnlyPanel } from './PokemonPanel'
 import TypeBadge from './TypeBadge'
 import { Hover, PokemonTip, SPRITES } from './Tooltips'
+import type { SavedSet } from '../lib/library'
 import { Toggle } from './FieldPanel'
 
 interface Props {
@@ -33,9 +34,11 @@ interface Props {
   foeTeam: PokemonState[]
   onChangeFoeTeam: (team: PokemonState[]) => void
   onSaveSet?: (p: PokemonState, name: string) => void
+  savedSets?: SavedSet[]
+  onSpeedTiers?: () => void
 }
 
-export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam, onSaveSet }: Props) {
+export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam, onSaveSet, savedSets, onSpeedTiers }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
@@ -169,6 +172,8 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
           onChange={(p) => setMon(selected, p)}
           seeder={seederFor(selected)}
           onSaveSet={onSaveSet}
+          savedSets={savedSets}
+          onSpeedTiers={onSpeedTiers}
           onClear={() => setMon(selected, emptyPokemon())}
           teamSpecies={team.map((p) => p.species)}
           lang={lang}

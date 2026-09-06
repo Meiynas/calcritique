@@ -258,6 +258,11 @@ Ajouté en v1.9.0 (retours du 6 septembre 2026, gros lot) :
 - Speed tiers (bouton ⚡ dans l'en-tête, SpeedTiersModal.tsx) : liste de référence choisie par l'utilisateur (par défaut les 30 Pokémon les plus joués d'après les partenaires d'usage), variantes cochables (0 SP nature −, 0 SP, 32 SP, 32 SP nature +, Mouchoir Choix, Vent Arrière, paralysé), position du Pokémon sélectionné (équipe 1 ou 2, avec objet, talent, Vent Arrière, boosts et statut réels), ligne "toi" surlignée et centrée, et pour chaque Pokémon plus rapide le nombre de SP à ajouter pour le dépasser avec la nature actuelle ("hors de portée" sinon). Réglages conservés (calcritique.speedtiers.v1).
 - Déroulé du tour : vue "Scénario probable" par défaut (une seule colonne : roll médian, pas de critique, effets à moins de 50 % non retenus) avec, sous chaque frappe, la fourchette de dégâts (min à max %) et les aléas (raté, crit, apeure la cible, statut). Bouton "Meilleur / moyen / pire" pour revenir aux trois colonnes. Choix mémorisé (calcritique.turnView).
 
+Ajouté en v1.9.1 (retours du 6 septembre 2026) :
+- Icône Terrain Brumeux : nuage ☁️. Infobulle Pokémon : noms de stats courts (ASp, DSp) sans retour à la ligne.
+- Fiche du Pokémon : bouton 📂 (avec le nombre de sets enregistrés pour cette espèce) qui déroule "Mes sets pour X" et charge le set choisi ; bouton ⚡ Speed tiers dans l'en-tête du tableau des stats (ouvre la fenêtre sur le bon côté).
+- Speed tiers refaits (calcritique.speedtiers.v2) : pour chaque Pokémon de la liste, 0 SP, 32 SP, 32 SP nature + et son set le plus joué (nature, SP et objet réels, Mouchoir compris), variantes cochables ; case "Mouchoir Choix pour tous" (x1,5 sur tous les comparés) ; les variantes d'un même Pokémon toutes hors de portée sont fusionnées sur la plus rapide (badge +N) ; doublons de vitesse supprimés.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -273,6 +278,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.9.1 : nuage pour Brumeux, "Mes sets" dans la fiche, bouton Speed tiers dans les stats, speed tiers avec set le plus joué, Mouchoir pour tous et fusion des variantes hors de portée.
 - 2026-09-06 : v1.9.0 : conditions de combat en bandeau compact en haut, Téra ON / OFF, bibliothèque de sets et d'équipes (export / import JSON), speed tiers personnalisés, vue "Scénario probable" du déroulé.
 - 2026-09-06 : v1.8.1 : infobulles en portal (opaques, au-dessus de tout), icônes recadrées et centrées, étiquette SWITCH.
 - 2026-09-06 : v1.8.0 : infobulles attaques et Pokémon avec icônes embarquées et descriptions du jeu, étiquettes alignées, Vampigraine victime / poseur.

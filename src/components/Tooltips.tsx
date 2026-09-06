@@ -76,7 +76,7 @@ export function PokemonTip({ species, lang }: { species: string; lang: Lang }) {
   const maxSpe = statAt50(bs.spe, 32, 'spe', 1.1)
   const minSpe = statAt50(bs.spe, 0, 'spe', 0.9)
   const sprite = SPRITES[species]
-  const stats: [string, number][] = [[t.statNames.hp, bs.hp], [t.statNames.atk, bs.atk], [t.statNames.def, bs.def], [t.statNames.spa, bs.spa], [t.statNames.spd, bs.spd], [t.statNames.spe, bs.spe]]
+  const stats: [string, number][] = [[t.statShort.hp, bs.hp], [t.statShort.atk, bs.atk], [t.statShort.def, bs.def], [t.statShort.spa, bs.spa], [t.statShort.spd, bs.spd], [t.statShort.spe, bs.spe]]
   return (
     <span className="flex gap-2">
       {sprite && <img src={sprite} alt="" className="h-14 w-14 shrink-0 object-contain" style={{ imageRendering: 'pixelated' }} />}
@@ -86,7 +86,7 @@ export function PokemonTip({ species, lang }: { species: string; lang: Lang }) {
           {info.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}
         </span>
         <span className="grid grid-cols-6 gap-0.5 text-center tabular-nums">
-          {stats.map(([n, v]) => <span key={n} className="rounded bg-surface-2 px-0.5 py-0.5"><span className="block text-[9px] text-muted">{n}</span><b>{v}</b></span>)}
+          {stats.map(([n, v]) => <span key={n} className="whitespace-nowrap rounded bg-surface-2 px-0.5 py-0.5"><span className="block text-[9px] text-muted">{n}</span><b>{v}</b></span>)}
         </span>
         <span className="text-muted">{t.abilities} : <span className="text-text">{abilities.map((a) => label('abilities', a, lang)).join(', ') || '·'}</span></span>
         <span className="text-muted">{t.speedRange} : <b className="text-text">{minSpe}</b> – <b className="text-text">{maxSpe}</b> <span className="text-[10px]">({t.scarfShort} {Math.floor(maxSpe * 1.5)})</span></span>

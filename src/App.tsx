@@ -40,7 +40,7 @@ export default function App() {
   // Bibliothèque de sets et d'équipes (stockage local + export / import)
   const [library, setLibrary] = useState<Library>(() => loadLibrary())
   const [showLibrary, setShowLibrary] = useState(false)
-  const [showSpeed, setShowSpeed] = useState(false)
+  const [showSpeed, setShowSpeed] = useState<SideKey | null>(null)
   const updateLibrary = (lib: Library) => { setLibrary(lib); saveLibrary(lib) }
   const saveSet = (p: PokemonState, name: string) => updateLibrary({ ...library, sets: [{ id: newId(), name, pokemon: cleanSet(p), createdAt: Date.now() }, ...library.sets] })
 
@@ -98,6 +98,8 @@ export default function App() {
         maxActive={activeCount(state.mode)}
         onSelect={(i) => setState((s) => ({ ...s, selected: { ...s.selected, [side]: i } }))}
         onSaveSet={saveSet}
+        savedSets={library.sets}
+        onSpeedTiers={() => setShowSpeed(side)}
         foeTeam={state.teams[foe]}
         onChangeFoeTeam={(team) => setState((s) => ({ ...s, teams: { ...s.teams, [foe]: team } }))}
         onSetActive={(pos, i) =>
@@ -146,7 +148,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted">
             <UpdateBadge status={update} lang={state.lang} />
-            <button type="button" onClick={() => setShowSpeed(true)} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
+            <button type="button" onClick={() => setShowSpeed('left')} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
             <button type="button" onClick={() => setShowLibrary(true)} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
             <button type="button" onClick={reset} className="rounded border border-border px-2 py-1 hover:text-text">{t.reset}</button>
             <div className="flex overflow-hidden rounded border border-border">
@@ -221,7 +223,7 @@ export default function App() {
         </div>
       </main>
 
-      {showSpeed && <SpeedTiersModal state={state} lang={state.lang} onClose={() => setShowSpeed(false)} />}
+      {showSpeed && <SpeedTiersModal state={state} lang={state.lang} initialSide={showSpeed} onClose={() => setShowSpeed(null)} />}
       {showLibrary && (
         <LibraryModal
           library={library}

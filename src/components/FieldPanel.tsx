@@ -25,7 +25,7 @@ const TERRAIN_STYLE: Record<string, string> = {
   Psychic: 'bg-pink-500/20 border-pink-400 text-pink-100',
   Misty: 'bg-fuchsia-300/15 border-fuchsia-300 text-fuchsia-100',
 }
-const ICON: Record<string, string> = { Sun: '☀️', Rain: '🌧️', Sand: '🌪️', Snow: '❄️', Electric: '⚡', Grassy: '🌿', Psychic: '🔮', Misty: '🌫️' }
+const ICON: Record<string, string> = { Sun: '☀️', Rain: '🌧️', Sand: '🌪️', Snow: '❄️', Electric: '⚡', Grassy: '🌿', Psychic: '🔮', Misty: '☁️' }
 
 export default function FieldPanel({ value, onChange, options, onOptions, lang }: Props) {
   const t = dict(lang)

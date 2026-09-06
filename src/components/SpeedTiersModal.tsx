@@ -4,25 +4,27 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppState, Lang, PokemonState, SideKey } from '../model'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
-import { buildPokemon, effectiveSpeed, speciesInfo } from '../lib/engine'
+import { buildPokemon, effectiveSpeed, finalStats, speciesInfo } from '../lib/engine'
 import { statAt50 } from '../lib/champions'
-import { LEGAL_SPECIES, usageRank } from '../lib/usage'
+import { LEGAL_SPECIES, mostPlayedSet, usageRank } from '../lib/usage'
 import Modal from './Modal'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
 import { SPRITES } from './Tooltips'
 
-export type VariantKey = 'min' | 'neutral0' | 'neutral32' | 'max' | 'scarf' | 'tailwind' | 'par'
+export type VariantKey = 'neutral0' | 'neutral32' | 'max' | 'mostPlayed'
 export interface SpeedTiersConfig {
   species: string[]
   variants: Record<VariantKey, boolean>
+  /** Mouchoir Choix donné à tous les Pokémon comparés (x1,5) */
+  scarfAll: boolean
 }
-const KEY = 'calcritique.speedtiers.v1'
-const ALL_VARIANTS: VariantKey[] = ['min', 'neutral0', 'neutral32', 'max', 'scarf', 'tailwind', 'par']
+const KEY = 'calcritique.speedtiers.v2'
+const ALL_VARIANTS: VariantKey[] = ['neutral0', 'neutral32', 'max', 'mostPlayed']
 
 export function defaultSpeedTiers(): SpeedTiersConfig {
   const species = [...LEGAL_SPECIES].sort((a, b) => usageRank(b) - usageRank(a)).slice(0, 30)
-  return { species, variants: { min: false, neutral0: true, neutral32: false, max: true, scarf: false, tailwind: false, par: false } }
+  return { species, variants: { neutral0: true, neutral32: true, max: true, mostPlayed: true }, scarfAll: false }
 }
 export function loadSpeedTiers(): SpeedTiersConfig {
   try {
@@ -30,7 +32,7 @@ export function loadSpeedTiers(): SpeedTiersConfig {
     if (!raw) return defaultSpeedTiers()
     const p = JSON.parse(raw) as Partial<SpeedTiersConfig>
     const d = defaultSpeedTiers()
-    return { species: Array.isArray(p.species) ? p.species.filter((s) => typeof s === 'string' && speciesInfo(s)) : d.species, variants: { ...d.variants, ...(p.variants ?? {}) } }
+    return { species: Array.isArray(p.species) ? p.species.filter((s) => typeof s === 'string' && speciesInfo(s)) : d.species, variants: { ...d.variants, ...(p.variants ?? {}) }, scarfAll: !!p.scarfAll }
   } catch {
     return defaultSpeedTiers()
   }
@@ -39,29 +41,37 @@ export function saveSpeedTiers(c: SpeedTiersConfig): void {
   try { localStorage.setItem(KEY, JSON.stringify(c)) } catch { /* stockage indisponible */ }
 }
 
-/** Vitesse d'une variante de référence au niveau 50 */
-function variantSpeed(base: number, v: VariantKey): number {
+interface Row { species: string; variant: VariantKey; speed: number; detail: string; merged: number }
+
+/** Vitesse d'une variante de référence au niveau 50 (sans Mouchoir) et son libellé de détail */
+function variantRow(species: string, v: VariantKey, lang: Lang): { speed: number; detail: string } | null {
+  const info = speciesInfo(species)
+  if (!info) return null
+  const base = info.baseStats.spe
   switch (v) {
-    case 'min': return statAt50(base, 0, 'spe', 0.9)
-    case 'neutral0': return statAt50(base, 0, 'spe', 1)
-    case 'neutral32': return statAt50(base, 32, 'spe', 1)
-    case 'max': return statAt50(base, 32, 'spe', 1.1)
-    case 'scarf': return Math.floor(statAt50(base, 32, 'spe', 1.1) * 1.5)
-    case 'tailwind': return statAt50(base, 32, 'spe', 1.1) * 2
-    case 'par': return Math.floor(statAt50(base, 32, 'spe', 1.1) * 0.5)
+    case 'neutral0': return { speed: statAt50(base, 0, 'spe', 1), detail: '' }
+    case 'neutral32': return { speed: statAt50(base, 32, 'spe', 1), detail: '' }
+    case 'max': return { speed: statAt50(base, 32, 'spe', 1.1), detail: '' }
+    case 'mostPlayed': {
+      const set = mostPlayedSet(species)
+      const stats = finalStats(set)
+      const scarf = set.item === 'Choice Scarf'
+      return { speed: scarf ? Math.floor(stats.spe * 1.5) : stats.spe, detail: `${label('natures', set.nature, lang)} ${set.sp.spe} SP${set.item ? ' · ' + label('items', set.item, lang) : ''}` }
+    }
   }
 }
 
 interface Props {
   state: AppState
   lang: Lang
+  initialSide?: SideKey
   onClose: () => void
 }
 
-export default function SpeedTiersModal({ state, lang, onClose }: Props) {
+export default function SpeedTiersModal({ state, lang, initialSide, onClose }: Props) {
   const t = dict(lang)
   const [config, setConfig] = useState<SpeedTiersConfig>(() => loadSpeedTiers())
-  const [side, setSide] = useState<SideKey>('left')
+  const [side, setSide] = useState<SideKey>(initialSide ?? 'left')
   const [manage, setManage] = useState(false)
   const update = (c: SpeedTiersConfig) => { setConfig(c); saveSpeedTiers(c) }
 
@@ -78,16 +88,6 @@ export default function SpeedTiersModal({ state, lang, onClose }: Props) {
   const rawSpe = myInfo ? statAt50(myInfo.baseStats.spe, me.sp.spe, 'spe', natureMod) : 0
   const factor = rawSpe > 0 ? mySpeed / rawSpe : 1
 
-  const rows = useMemo(() => {
-    const out: { species: string; variant: VariantKey; speed: number }[] = []
-    for (const sp of config.species) {
-      const info = speciesInfo(sp)
-      if (!info) continue
-      for (const v of ALL_VARIANTS) if (config.variants[v]) out.push({ species: sp, variant: v, speed: variantSpeed(info.baseStats.spe, v) })
-    }
-    return out.sort((a, b) => b.speed - a.speed || a.species.localeCompare(b.species))
-  }, [config])
-
   /** SP de Vitesse nécessaires (avec la nature actuelle et les modificateurs actuels) pour dépasser une vitesse cible */
   function spToBeat(target: number): number | null {
     if (!myInfo) return null
@@ -96,6 +96,38 @@ export default function SpeedTiersModal({ state, lang, onClose }: Props) {
     }
     return null
   }
+
+  const rows = useMemo(() => {
+    const all: Row[] = []
+    for (const sp of config.species) {
+      for (const v of ALL_VARIANTS) {
+        if (!config.variants[v]) continue
+        const r = variantRow(sp, v, lang)
+        if (!r) continue
+        const speed = config.scarfAll && !(v === 'mostPlayed' && mostPlayedSet(sp).item === 'Choice Scarf') ? Math.floor(r.speed * 1.5) : r.speed
+        all.push({ species: sp, variant: v, speed, detail: r.detail, merged: 0 })
+      }
+    }
+    // Fusion : les variantes d'un même Pokémon toutes hors de portée sont regroupées sur la plus rapide
+    const out: Row[] = []
+    const bySpecies = new Map<string, Row[]>()
+    for (const r of all) bySpecies.set(r.species, [...(bySpecies.get(r.species) ?? []), r])
+    for (const list of bySpecies.values()) {
+      const unreachable = list.filter((r) => r.speed > mySpeed && spToBeat(r.speed) === null)
+      const rest = list.filter((r) => !unreachable.includes(r))
+      if (unreachable.length > 1) {
+        const top = unreachable.reduce((a, b) => (b.speed > a.speed ? b : a))
+        out.push({ ...top, merged: unreachable.length - 1 })
+      } else out.push(...unreachable)
+      out.push(...rest)
+    }
+    // Doublons exacts (même Pokémon, même vitesse) : on garde une ligne
+    const seen = new Set<string>()
+    return out
+      .filter((r) => { const k = `${r.species}:${r.speed}`; if (seen.has(k)) return false; seen.add(k); return true })
+      .sort((a, b) => b.speed - a.speed || a.species.localeCompare(b.species))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, lang, mySpeed, myInfo, natureMod, factor])
 
   const faster = rows.filter((r) => r.speed > mySpeed).length
   const slower = rows.filter((r) => r.speed < mySpeed).length
@@ -118,7 +150,11 @@ export default function SpeedTiersModal({ state, lang, onClose }: Props) {
             <span className="text-muted">{t.speedTiersMine(faster, ties, slower)}</span>
           </span>
         )}
-        <button type="button" onClick={() => setManage((v) => !v)} className={'ml-auto rounded border px-2 py-1 ' + (manage ? 'border-accent bg-accent/20' : 'border-border hover:text-text')}>⚙ {t.speedTiersManage}</button>
+        <label className="ml-auto flex items-center gap-1" title={t.speedScarfAllHint}>
+          <input type="checkbox" checked={config.scarfAll} onChange={(e) => update({ ...config, scarfAll: e.target.checked })} />
+          {t.speedScarfAll}
+        </label>
+        <button type="button" onClick={() => setManage((v) => !v)} className={'rounded border px-2 py-1 ' + (manage ? 'border-accent bg-accent/20' : 'border-border hover:text-text')}>⚙ {t.speedTiersManage}</button>
       </div>
 
       {manage && (
@@ -160,14 +196,15 @@ export default function SpeedTiersModal({ state, lang, onClose }: Props) {
               const need = cmp === 'faster' ? spToBeat(r.speed) : null
               const info = speciesInfo(r.species)!
               const rowEl = (
-                <tr key={`${r.species}-${r.variant}`} className={'border-t border-border/50 ' + (cmp === 'tie' ? 'bg-amber-500/10' : '')}>
+                <tr key={`${r.species}-${r.variant}-${r.speed}`} className={'border-t border-border/50 ' + (cmp === 'tie' ? 'bg-amber-500/10' : '')}>
                   <td className="w-12 py-1 pr-2 text-right font-semibold tabular-nums">{r.speed}</td>
                   <td className="py-1">
                     <span className="flex items-center gap-1.5">
                       {SPRITES[r.species] && <img src={SPRITES[r.species]} alt="" className="inline-block h-6 w-6 object-contain" style={{ imageRendering: 'pixelated' }} />}
                       <span className="font-medium">{label('species', r.species, lang)}</span>
                       {info.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}
-                      <span className="text-muted">{t.speedVariant[r.variant]}</span>
+                      <span className="text-muted">{t.speedVariant[r.variant]}{r.detail ? ` (${r.detail})` : ''}{config.scarfAll ? ` · ${t.scarfShort.replace(':', '')}` : ''}</span>
+                      {r.merged > 0 && <span className="rounded bg-surface-2 px-1 text-[10px] text-muted" title={t.speedMergedHint}>+{r.merged}</span>}
                     </span>
                   </td>
                   <td className={'py-1 text-right ' + (cmp === 'faster' ? 'text-orange-300' : cmp === 'slower' ? 'text-emerald-300' : 'text-amber-300')}>
