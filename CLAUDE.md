@@ -285,8 +285,12 @@ Ajouté en v1.10.1 (6 septembre 2026) : mise à jour automatique des données.
 
 Ajouté en v1.10.5 (6 septembre 2026) :
 - Mise à jour automatique validée : le run manuel a rafraîchi src/data/usage.json (235 Pokémon) et publié tout seul la v1.10.4 (installeur + site). Elle tourne chaque nuit.
-- Speed tiers : "Mouchoir Choix pour tous" ne s'applique pas aux Méga (elles tiennent leur pierre) ; le Pokémon comparé n'apparaît plus dans la liste face à lui-même.
+- Speed tiers : "Mouchoir Choix pour tous" ne s'applique pas aux Méga (elles tiennent leur pierre) ; le Pokémon comparé garde ses autres variantes (0 SP, 32 SP...) mais pas celle qui a exactement sa Vitesse (égalité avec lui-même).
 - Procédure quand le robot a publié : dans l'espace de travail cloud, `git fetch origin && git reset --hard origin/main` avant toute modification, et sur le PC `cgit fetch` puis `cgit reset --soft origin/main` avant de committer (le montage interdit la suppression de fichiers, donc `cgit pull` échoue).
+
+Ajouté en v1.11.0 (6 septembre 2026) :
+- Thèmes : Sombre (défaut), Clair et Pastel (blanc, bleu clair, rose), boutons ☾ ☀ 🌸 dans l'en-tête, mémorisés (calcritique.theme, attribut data-theme sur <html>). Implémentation : redéfinition des variables --color-* de Tailwind par thème dans index.css, plus des surcharges pour les classes pensées pour le fond sombre (bg-white/10 des jauges, textes emerald-300 / amber-300 / orange-300... assombris). Les effets visuels de terrain sont atténués (opacité 0,6) sur fond clair.
+- Speed tiers : les Pokémon des deux équipes apparaissent avec leur set réel ("Équipe 1 / Équipe 2 · set actuel", fond rouge ou bleu, jamais fusionnés) et les autres lignes de ces espèces ont un liseré rouge / bleu. Sur la ligne "toi" et sur les lignes "set actuel", on règle directement les SP de Vitesse (0 à 32) et le stade de Vitesse (−6 à +6) : ça modifie le Pokémon dans son équipe (prop onUpdate). Méga sans Mouchoir ; le Pokémon comparé garde ses autres variantes sauf celle identique à sa Vitesse.
 
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
@@ -303,6 +307,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.11.0 : thèmes Clair et Pastel, speed tiers avec les deux équipes en couleur et réglage direct des SP / stades.
 - 2026-09-06 : v1.10.5 : Méga sans Mouchoir dans les speed tiers, pas d'auto-comparaison. v1.10.4 publiée automatiquement par le robot avec des données fraîches.
 - 2026-09-06 : v1.10.3 : correctifs du workflow de mise à jour (permissions des jobs appelés, versions de package-lock, erreurs annotées).
 - 2026-09-06 : v1.10.2 : première version publiée automatiquement par le robot (test du workflow).

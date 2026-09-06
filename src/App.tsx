@@ -18,6 +18,10 @@ import Results from './components/Results'
 import TurnPanel from './components/TurnPanel'
 import FxLayer from './components/FxLayer'
 
+type Theme = 'dark' | 'light' | 'pastel'
+const THEME_KEY = 'calcritique.theme'
+const THEME_ICON: Record<Theme, string> = { dark: '☾', light: '☀', pastel: '🌸' }
+
 export default function App() {
   const [state, setState] = useState<AppState>(() => loadState(mostPlayedSet))
   const [update, setUpdate] = useState<UpdateStatus>({ state: 'idle' })
@@ -50,6 +54,12 @@ export default function App() {
   }
   const [showSpeed, setShowSpeed] = useState<SideKey | null>(null)
   const [showTypes, setShowTypes] = useState(false)
+  // Thème : sombre (défaut), clair, pastel. Mémorisé dans le navigateur / l'application.
+  const [theme, setTheme] = useState<Theme>(() => { try { const v = localStorage.getItem(THEME_KEY); return v === 'light' || v === 'pastel' ? v : 'dark' } catch { return 'dark' } })
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem(THEME_KEY, theme) } catch { /* stockage indisponible */ }
+  }, [theme])
   const updateLibrary = (lib: Library) => { setLibrary(lib); saveLibrary(lib) }
   const saveSet = (p: PokemonState, name: string) => updateLibrary({ ...library, sets: [{ id: newId(), name, pokemon: cleanSet(p), createdAt: Date.now() }, ...library.sets] })
 
@@ -163,6 +173,11 @@ export default function App() {
             <button type="button" onClick={() => setShowSpeed('left')} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
             <button type="button" onClick={() => setShowLibrary('sets')} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
             <button type="button" onClick={reset} className="rounded border border-border px-2 py-1 hover:text-text">{t.reset}</button>
+            <div className="flex overflow-hidden rounded border border-border" title={t.themeTitle}>
+              {(['dark', 'light', 'pastel'] as const).map((th) => (
+                <button key={th} type="button" onClick={() => setTheme(th)} aria-label={t.themeNames[th]} title={t.themeNames[th]} className={'px-2 py-1 ' + (theme === th ? 'bg-accent text-white' : 'hover:text-text')}>{THEME_ICON[th]}</button>
+              ))}
+            </div>
             <div className="flex overflow-hidden rounded border border-border">
               {(['fr', 'en'] as const).map((l) => (
                 <button
@@ -236,7 +251,15 @@ export default function App() {
       </main>
 
       {showTypes && <TypeChartModal state={state} lang={state.lang} onClose={() => setShowTypes(false)} />}
-      {showSpeed && <SpeedTiersModal state={state} lang={state.lang} initialSide={showSpeed} onClose={() => setShowSpeed(null)} />}
+      {showSpeed && (
+        <SpeedTiersModal
+          state={state}
+          lang={state.lang}
+          initialSide={showSpeed}
+          onClose={() => setShowSpeed(null)}
+          onUpdate={(side, index, patch) => setState((s) => { const team = [...s.teams[side]]; team[index] = { ...team[index], ...patch }; return { ...s, teams: { ...s.teams, [side]: team } } })}
+        />
+      )}
       {showLibrary && (
         <LibraryModal
           initialTab={showLibrary}
