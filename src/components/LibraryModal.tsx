@@ -9,6 +9,7 @@ import Modal from './Modal'
 import TypeBadge from './TypeBadge'
 import { SPRITES } from './Tooltips'
 import { moveInfo } from '../lib/engine'
+import { exportPokemon, exportTeam, parseTeam } from '../lib/showdown'
 
 interface Props {
   library: Library
@@ -18,12 +19,14 @@ interface Props {
   onLoadTeam: (side: SideKey, team: PokemonState[]) => void
   lang: Lang
   onClose: () => void
-  initialTab?: 'sets' | 'teams'
+  initialTab?: 'sets' | 'teams' | 'showdown'
 }
 
 export default function LibraryModal({ library, onChange, teams, onLoadSet, onLoadTeam, lang, onClose, initialTab }: Props) {
   const t = dict(lang)
-  const [tab, setTab] = useState<'sets' | 'teams'>(initialTab ?? 'sets')
+  const [tab, setTab] = useState<'sets' | 'teams' | 'showdown'>(initialTab ?? 'sets')
+  const [sdText, setSdText] = useState('')
+  const [sdWarnings, setSdWarnings] = useState<string[]>([])
   const [q, setQ] = useState('')
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
   const [message, setMessage] = useState('')
@@ -75,9 +78,9 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
     <Modal title={t.library} onClose={onClose} wide>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2 text-xs">
         <div className="flex overflow-hidden rounded border border-border">
-          {(['sets', 'teams'] as const).map((k) => (
+          {(['sets', 'teams', 'showdown'] as const).map((k) => (
             <button key={k} type="button" onClick={() => setTab(k)} className={'px-3 py-1 font-semibold ' + (tab === k ? 'bg-accent text-white' : 'text-muted hover:text-text')}>
-              {k === 'sets' ? `${t.libSets} (${library.sets.length})` : `${t.libTeams} (${library.teams.length})`}
+              {k === 'sets' ? `${t.libSets} (${library.sets.length})` : k === 'teams' ? `${t.libTeams} (${library.teams.length})` : t.libShowdown}
             </button>
           ))}
         </div>
@@ -96,7 +99,7 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = '' }} />
         </span>
       </div>
-      <p className="px-4 pt-2 text-[11px] text-muted">{tab === 'teams' ? t.libTeamsHint : t.libHint}</p>
+      <p className="px-4 pt-2 text-[11px] text-muted">{tab === 'teams' ? t.libTeamsHint : tab === 'showdown' ? t.sdHint : t.libHint}</p>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {tab === 'sets' && (
           sets.length === 0 ? <p className="text-sm text-muted">{t.libEmptySets}</p> : (
@@ -117,6 +120,54 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
               ))}
             </div>
           )
+        )}
+        {tab === 'showdown' && (
+          <div className="flex flex-col gap-2 text-xs">
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setSdText(exportTeam(teams.left))} className="rounded border border-accent/60 bg-accent/10 px-2 py-1 hover:bg-accent/20">{t.sdExport(1)}</button>
+              <button type="button" onClick={() => setSdText(exportTeam(teams.right))} className="rounded border border-sky-400/60 bg-sky-400/10 px-2 py-1 hover:bg-sky-400/20">{t.sdExport(2)}</button>
+              <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(sdText); flash(t.libCopied) } catch { flash(t.libCopyFailed) } }} className="rounded border border-border px-2 py-1 hover:text-text">📋 {t.libCopy}</button>
+            </div>
+            <textarea className="input min-h-64 font-mono text-[11px]" value={sdText} onChange={(e) => setSdText(e.target.value)} placeholder={t.sdPlaceholder} spellCheck={false} />
+            <div className="flex flex-wrap items-center gap-2">
+              {(['left', 'right'] as const).map((side) => (
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => {
+                    const r = parseTeam(sdText)
+                    setSdWarnings(r.warnings)
+                    if (r.team.length === 0) { flash(t.sdNothing); return }
+                    if (r.team.length === 1) onLoadSet(side, r.team[0]) // un seul Pokémon : dans l'emplacement sélectionné
+                    else {
+                      const full = [...r.team]
+                      while (full.length < 6) full.push(teams[side][full.length] ?? cleanSet({ ...r.team[0], species: '' }))
+                      onLoadTeam(side, full.slice(0, 6))
+                    }
+                    flash(t.sdImported(r.team.length))
+                  }}
+                  className={'rounded border px-2 py-1 ' + (side === 'left' ? 'border-accent/60 bg-accent/10 hover:bg-accent/20' : 'border-sky-400/60 bg-sky-400/10 hover:bg-sky-400/20')}
+                >
+                  ⬆ {t.sdImport(side === 'left' ? 1 : 2)}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const r = parseTeam(sdText)
+                  setSdWarnings(r.warnings)
+                  if (r.team.length === 0) { flash(t.sdNothing); return }
+                  const sets = r.team.map((p) => ({ id: newId(), name: `${label('species', p.species, lang)}${p.item ? ' ' + label('items', p.item, lang) : ''}`, pokemon: cleanSet(p), createdAt: Date.now() }))
+                  onChange({ ...library, sets: [...sets, ...library.sets] })
+                  flash(t.sdSavedSets(sets.length))
+                }}
+                className="rounded border border-border px-2 py-1 hover:text-text"
+              >
+                💾 {t.sdToLibrary}
+              </button>
+            </div>
+            {sdWarnings.length > 0 && <ul className="list-disc pl-5 text-orange-300">{sdWarnings.map((w, i) => <li key={i}>{w}</li>)}</ul>}
+          </div>
         )}
         {tab === 'teams' && (
           library.teams.length === 0 ? <p className="text-sm text-muted">{t.libEmptyTeams}</p> : (
@@ -193,6 +244,7 @@ function SetCard({ set, lang, renaming, onRenameStart, onRenameChange, onRenameD
         <button type="button" onClick={() => onLoad('right')} className="rounded border border-sky-400/60 bg-sky-400/10 px-2 py-0.5 hover:bg-sky-400/20">→ {t.team2}</button>
         <span className="flex gap-1">
           <button type="button" onClick={onDuplicate} title={t.libDuplicate} className="flex-1 rounded border border-border px-1 py-0.5 text-muted hover:text-text">⧉</button>
+          <button type="button" onClick={() => { navigator.clipboard.writeText(exportPokemon(p)).catch(() => undefined) }} title={t.sdCopySet} className="flex-1 rounded border border-border px-1 py-0.5 text-muted hover:text-text">📋</button>
           <button type="button" onClick={onRenameStart} title={t.libRename} className="flex-1 rounded border border-border px-1 py-0.5 text-muted hover:text-text">✎</button>
           <button type="button" onClick={onRemove} title={t.libDelete} className="flex-1 rounded border border-border px-1 py-0.5 text-muted hover:border-accent hover:text-accent">🗑</button>
         </span>

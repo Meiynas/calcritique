@@ -298,6 +298,11 @@ Ajouté en v1.12.0 (6 septembre 2026) : calcul inversé et matrice.
 - Détail par attaque : bloc repliable "Analyse : SP à ajouter et autres attaques" (calculé à l'ouverture seulement) qui affiche ces trois conseils ; les autres attaques ne sont proposées que si l'attaque courante ne met pas KO au roll le plus bas.
 - Matrice équipe contre équipe (bouton ⊞ dans l'en-tête, MatrixModal.tsx) : lignes = attaquants, colonnes = cibles, sens "Équipe 1 attaque" ou "Équipe 2 attaque". Chaque case : la meilleure attaque du kit (tri : OHKO, puis 2HKO, puis dégâts max), vrai taux de OHKO, 2HKO, fourchette de dégâts, code couleur (rouge OHKO sûr, orange OHKO possible, ambre 2HKO, vert rien). Cibles multiples comptées comme cible unique (pas de x0,75).
 
+Ajouté en v1.13.0 (6 septembre 2026) : format Showdown.
+- src/lib/showdown.ts : exportPokemon / exportTeam (noms anglais, Level 50, Tera Type, EVs = min(252, SP x 8), nature, attaques) et parseTeam (blocs séparés par une ligne vide ; surnom (Espèce) (M) @ Objet ; lignes Ability / Talent, Tera Type, EVs (EV / 8 arrondi, plafonné à 32) ou SPs (directs), Nature ; noms anglais OU français via resolveName ; formes "Alolan X" -> "X-Alola" ; Level / IVs / Shiny ignorés ; avertissements pour les noms inconnus). Test automatique ajouté (16 tests).
+- Bibliothèque : onglet "Texte Showdown" avec zone de texte, "Exporter l'équipe 1 / 2 en texte", "Copier", "Importer dans l'équipe 1 / 2" (un seul Pokémon = dans l'emplacement sélectionné ; plusieurs = remplace la colonne, les emplacements restants gardent leurs Pokémon), "Ajouter à la bibliothèque (sets)". Bouton 📋 sur chaque set enregistré pour copier son texte.
+- Zone Magique : effet fixe (anneaux bleus et halo), plus d'animation de rotation.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -313,6 +318,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.13.0 : import / export au format texte Showdown (pokepaste), Zone Magique sans animation.
 - 2026-09-06 : v1.12.2 : Annule Garde affiché à 100 % dans les listes d'attaques et dans les conseils (le moteur le gérait déjà pour les calculs) ; matrice : case "Retirer les attaques sur 2 tours" (Vol, Tunnel, Plongée, Hantise, Lance-Soleil, Ultralaser, Giga Impact...) quand les attaques hors kit sont incluses, cochée par défaut.
 - 2026-09-06 : v1.12.1 : matrice : case "Inclure les attaques hors kit" (présélection rapide par damageRange des 6 attaques du learnset qui frappent le plus fort, puis calcul complet ; attaques hors kit marquées d'une étoile).
 - 2026-09-06 : v1.12.0 : analyse par attaque (SP offensifs pour garantir un seuil, SP défensifs pour passer sous un seuil, autres attaques qui OHKO à coup sûr) et matrice équipe contre équipe dans les deux sens.

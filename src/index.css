@@ -198,18 +198,11 @@ input[type="number"]::-webkit-inner-spin-button {
   box-shadow: inset 0 -120px 160px -60px rgba(15, 23, 42, 0.8);
 }
 
-/* Zone Magique : anneaux bleus qui tournent (les objets sont neutralisés) */
+/* Zone Magique : anneaux bleus fixes (les objets sont neutralisés), sans animation */
 .fx-magicroom {
-  inset: auto;
-  left: 50%;
-  top: 50%;
-  width: 200vmax;
-  height: 200vmax;
-  transform: translate(-50%, -50%) rotate(0deg);
   background:
-    repeating-radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.0) 0 60px, rgba(96, 165, 250, 0.10) 62px 64px),
-    conic-gradient(from 0deg at 50% 50%, rgba(96, 165, 250, 0.10), transparent 20%, rgba(59, 130, 246, 0.10) 40%, transparent 60%, rgba(96, 165, 250, 0.10) 80%, transparent);
-  animation: fx-spin 40s linear infinite;
+    repeating-radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0) 0 60px, rgba(96, 165, 250, 0.10) 62px 64px),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.12), transparent 60%);
 }
 .fx-magicroom-tint { box-shadow: inset 0 0 200px 20px rgba(37, 99, 235, 0.22); }
 @keyframes fx-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
