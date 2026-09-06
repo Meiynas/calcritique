@@ -1,0 +1,82 @@
+# Mise à jour automatique des données, chaque nuit à 2 h (heure de Paris en été ; 1 h en hiver).
+# 1. Récupère les statistiques d'usage sur championsbattledata.com (src/data/usage.json).
+# 2. Met à jour le moteur de calcul @smogon/calc (paquet npm, source Showdown / Smogon) si une version compatible existe.
+# 3. Si quelque chose a changé et que les tests passent : nouvelle version (x.y.Z+1), commit, étiquette,
+#    puis publication de l'installeur Windows et du site (les workflows release.yml et pages.yml sont appelés directement,
+#    car un push fait par le robot GitHub ne déclenche pas les autres workflows).
+name: Mise à jour automatique des données
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Statistiques d'usage (championsbattledata.com)
+        run: node scripts/fetch-usage.mjs
+        continue-on-error: true
+
+      - name: Moteur de calcul (@smogon/calc)
+        run: npm update @smogon/calc --save
+        continue-on-error: true
+
+      - name: Quelque chose a changé ?
+        id: changed
+        run: |
+          if git diff --quiet -- src/data/usage.json package.json package-lock.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager diff --stat
+          fi
+
+      - name: Tests
+        if: steps.changed.outputs.changed == 'true'
+        run: npm test
+
+      - name: Nouvelle version, commit et étiquette
+        id: bump
+        if: steps.changed.outputs.changed == 'true'
+        run: |
+          VERSION=$(node scripts/bump-version.mjs)
+          git config user.name "calcritique-bot"
+          git config user.email "calcritique-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "Données du $(date -u +%Y-%m-%d) : statistiques d'usage et moteur à jour (v$VERSION)"
+          git tag "v$VERSION"
+          git push origin main "v$VERSION"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: refresh
+    if: needs.refresh.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.refresh.outputs.tag }}
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+  site:
+    needs: refresh
+    if: needs.refresh.outputs.tag != ''
+    uses: ./.github/workflows/pages.yml

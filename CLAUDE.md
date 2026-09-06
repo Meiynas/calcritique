@@ -275,6 +275,13 @@ Ajouté en v1.10.0 (retours du 6 septembre 2026) :
 - Table des types (bouton 🧬 dans l'en-tête, TypeChartModal.tsx) : onglet Défense = pour chaque type d'attaque, multiplicateur subi par chaque Pokémon de l'équipe (types actuels, Téra si ON, talents : Lévitation, Absorb Volt / Paratonnerre / Motorisé, Absorb Eau / Lavabo / Peau Sèche, Torche / Corps Bien Cuit, Herbivore, Mangeterre, Ballon, Isograisse, Ignifu-Voile, Sel Purificateur, Boule de Poils) avec colonnes ↓ faibles, ↑ résistants, = bilan. Onglet Attaque = pour chaque type cible, la meilleure efficacité des attaques offensives de chaque Pokémon (points de couleur = types de ses attaques) et le meilleur de l'équipe.
 - Sources d'équipes vérifiées le 6 septembre 2026 : pokebase.app/pokemon-champions/teams liste des équipes de tournoi (filtres par Pokémon, attaques, placement) mais sans API ni export ; championsbattledata n'a pas d'équipes. Une base d'équipes demanderait une collecte via le navigateur, à décider avec l'humain.
 
+Ajouté en v1.10.1 (6 septembre 2026) : mise à jour automatique des données.
+- Phrase du vrai taux de KO remise sous le titre "Détail par attaque".
+- scripts/fetch-usage.mjs : récupère l'index puis /api/battle/Doubles/<battleName> pour chaque Pokémon ayant des données Doubles, et écrit src/data/usage.json (clé = showdownId, name = nom affiché, top 10 par catégorie, spreads [pv, atq, déf, asp, dsp, vit, %], partenaires par rang). Ne réécrit pas le fichier si rien n'a changé ; refuse d'écrire s'il obtient moins de 100 Pokémon. Format API constaté : rows avec category move / held_item / ability / stat_alignment (natures, stat_up / stat_down) / stat_points (hp_points...) / teammate, champ percentage_value.
+- scripts/bump-version.mjs : x.y.Z -> x.y.Z+1 dans package.json, Cargo.toml (et Cargo.lock s'il existe).
+- .github/workflows/data-refresh.yml : chaque nuit (cron 0 0 UTC = 2 h à Paris en été, 1 h en hiver) ou à la demande : fetch-usage, npm update @smogon/calc, et si src/data/usage.json ou package.json / package-lock.json ont changé : tests, version +1, commit par "calcritique-bot", étiquette, push, puis appel direct de release.yml (installeur) et pages.yml (site), car un push fait avec le jeton du robot ne déclenche pas les autres workflows. release.yml et pages.yml acceptent désormais workflow_call (release.yml prend l'étiquette en entrée).
+- Ce qui reste manuel : nouveaux Pokémon / attaques (fichiers names, extra, learnsets, movedesc, sprites à régénérer depuis PokéAPI, et le moteur doit les connaître).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -290,6 +297,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.10.1 : mise à jour automatique nocturne des statistiques d'usage et du moteur (workflow data-refresh), publication automatique d'une nouvelle version quand les données changent.
 - 2026-09-06 : v1.10.0 : set automatique, speed tiers sur tout le pool avec filtre, en-têtes hors des boîtes, table des types défense / attaque.
 - 2026-09-06 : v1.9.2 : composeur de sets populaires (usage), boutons équipe 💾 / 📂 dans les colonnes, fusion des variantes plus lentes dans les speed tiers. Constat : pas de sets complets ni d'équipes dans l'API d'usage.
 - 2026-09-06 : v1.9.1 : nuage pour Brumeux, "Mes sets" dans la fiche, bouton Speed tiers dans les stats, speed tiers avec set le plus joué, Mouchoir pour tous et fusion des variantes hors de portée.

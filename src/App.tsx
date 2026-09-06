@@ -214,6 +214,7 @@ export default function App() {
             {details.filter((d) => d.result && d.result.category !== 'Status').length > 0 && (
               <section className="flex flex-col gap-3">
                 <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted">{t.detailsTitle}</h2>
+                <p className="px-1 -mt-2 text-[11px] text-muted">{t.koExplain}</p>
                 {details.map((d) =>
                   d.result && d.result.category !== 'Status' ? (
                     <div key={`${d.actor.side}:${d.actor.index}>${d.target.side}:${d.target.index}`}>
@@ -225,7 +226,6 @@ export default function App() {
                     </div>
                   ) : null,
                 )}
-                <p className="px-1 text-[11px] text-muted">{t.koExplain}</p>
               </section>
             )}
 

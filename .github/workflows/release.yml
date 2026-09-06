@@ -7,6 +7,17 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+  # Appelé par la mise à jour automatique des données (data-refresh.yml) avec l'étiquette à publier
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY:
+        required: true
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
+        required: true
 
 permissions:
   contents: write
@@ -16,6 +27,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -37,8 +50,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Calcritique ${{ github.ref_name }}"
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: "Calcritique ${{ inputs.tag || github.ref_name }}"
           releaseBody: "Téléchargez le fichier .exe ci-dessous pour installer ou mettre à jour Calcritique."
           releaseDraft: false
           prerelease: false
