@@ -11,7 +11,7 @@ import PokemonPicker from './PokemonPicker'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
 import { speciesInfo } from '../lib/engine'
-import PokemonPanel from './PokemonPanel'
+import PokemonPanel, { MovesOnlyPanel } from './PokemonPanel'
 import TypeBadge from './TypeBadge'
 import { Toggle } from './FieldPanel'
 
@@ -35,6 +35,8 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
+  const [view, setView] = useState<'stats' | 'moves'>('stats')
+  const movesView = maxActive === 2 && view === 'moves'
   function doSwitch(i: number) {
     const r = switchIn(team[i], sideState, field)
     const next = [...team]
@@ -53,17 +55,11 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
     onChangeTeam(next)
   }
   const wallClass = ['side-fx', sideState.reflect && 'side-reflect', sideState.lightScreen && 'side-lightscreen', sideState.auroraVeil && 'side-auroraveil', sideState.helpingHand && 'side-helpinghand', sideState.friendGuard && 'side-friendguard'].filter(Boolean).join(' ')
-  const roleColor = side === 'left' ? 'text-accent' : 'text-sky-400'
 
   return (
     <div className={'flex flex-col gap-3 rounded-2xl p-2 transition-shadow ' + wallClass}>
       {/* Pièges sur ce côté */}
       <HazardStrip value={sideState} onChange={onChangeSide} lang={lang} />
-
-      <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-bold uppercase tracking-wide">{side === 'left' ? t.team1 : t.team2}</h2>
-        <span className={'text-xs font-semibold uppercase ' + roleColor}>{t.onField}</span>
-      </div>
 
       {/* Bandeau "sur le terrain" : positions A / B */}
       <div className={'grid gap-1.5 px-1 ' + (maxActive === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
@@ -116,17 +112,52 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
         ))}
       </div>
 
-      {/* Éditeur du Pokémon sélectionné */}
-      <PokemonPanel
-        title={`${side === 'left' ? t.team1 : t.team2} · ${t.slot} ${selected + 1}`}
-        role={side === 'left' ? 'attacker' : 'defender'}
-        value={team[selected]}
-        targetOptions={targetOptions}
-        onChange={(p) => setMon(selected, p)}
-        onClear={() => setMon(selected, emptyPokemon())}
-        teamSpecies={team.map((p) => p.species)}
-        lang={lang}
-      />
+      {/* En 2v2 : bascule entre la fiche complète et les attaques des Pokémon A et B */}
+      {maxActive === 2 && (
+        <div className="flex gap-1 px-1">
+          {(['stats', 'moves'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={'flex-1 rounded-md border px-2 py-1 text-xs font-semibold ' + (view === v ? 'border-accent bg-accent/20 text-text' : 'border-border bg-surface-2 text-muted hover:text-text')}
+            >
+              {v === 'stats' ? t.viewStats : t.viewMoves}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {movesView ? (
+        <div className="flex flex-col gap-2">
+          {[0, 1].map((pos) => {
+            const idx = active[pos]
+            const mon = idx !== undefined ? team[idx] : undefined
+            return (
+              <MovesOnlyPanel
+                key={pos}
+                pos={pos === 0 ? 'A' : 'B'}
+                value={mon ?? emptyPokemon()}
+                onChange={(p) => { if (idx !== undefined) setMon(idx, p) }}
+                targetOptions={targetOptions}
+                role={side === 'left' ? 'attacker' : 'defender'}
+                lang={lang}
+              />
+            )
+          })}
+        </div>
+      ) : (
+        <PokemonPanel
+          title={`${side === 'left' ? t.team1 : t.team2} · ${t.slot} ${selected + 1}`}
+          role={side === 'left' ? 'attacker' : 'defender'}
+          value={team[selected]}
+          targetOptions={targetOptions}
+          onChange={(p) => setMon(selected, p)}
+          onClear={() => setMon(selected, emptyPokemon())}
+          teamSpecies={team.map((p) => p.species)}
+          lang={lang}
+        />
+      )}
       {pickSlot !== null && (
         <PokemonPicker
           team={team.map((p) => p.species)}

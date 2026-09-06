@@ -149,3 +149,25 @@ test('tour : Garde Large bloque Séisme, Coup d\'Main renforce l\'allié, Vent G
   const onAvalugg = eq.hits.find((h) => h.target.index === 0)!
   assert.ok(onAvalugg.blocked && onAvalugg.blockedBy === 'protect')
 })
+
+test('tour : Cage Éclair paralyse et divise la Vitesse pour la suite du tour ; sans effet sur un type Sol', async () => {
+  const { simulateTurn, canParalyze } = await import('../src/lib/turn')
+  const { defaultState } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '2v2'
+  // Farfaduvet (Prankster) lance Cage Éclair sur Kingambit ; Kingambit devrait alors passer après Garchomp lent
+  st.teams.left[0] = defaultPokemon('Whimsicott', { nature: 'Timid', sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 32 }, ability: 'Prankster', moves: ['Thunder Wave', '', '', ''], target: 1 })
+  st.teams.left[1] = defaultPokemon('Garchomp', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, moves: ['Earthquake', '', '', ''] })
+  st.teams.right[0] = defaultPokemon('Kingambit', { nature: 'Jolly', sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ['Kowtow Cleave', '', '', ''] })
+  st.teams.right[1] = defaultPokemon('Toxapex', { moves: ['Protect', '', '', ''] })
+  st.active = { left: [0, 1], right: [0, 1] }
+  const r = simulateTurn(st)
+  const avg = r.scenarios.average
+  const tw = avg.actions.find((a) => a.action.move === 'Thunder Wave')!
+  assert.equal(tw.effect, 'paralyze')
+  const posOf = (m: string) => avg.actions.find((a) => a.action.move === m)!.position
+  assert.ok(posOf('Earthquake') < posOf('Kowtow Cleave')) // Kingambit paralysé (102 -> 51) passe après Garchomp (122)
+  assert.ok(!canParalyze('Thunder Wave', defaultPokemon('Garchomp'), field))
+  assert.ok(!canParalyze('Stun Spore', defaultPokemon('Rillaboom'), field))
+  assert.ok(canParalyze('Glare', defaultPokemon('Garchomp'), field))
+})

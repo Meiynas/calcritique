@@ -201,6 +201,7 @@ export default function FxLayer({ field }: { field: FieldState }) {
       {field.trickRoom && <div className="fx-trickroom" />}
       {field.gravity && <div className="fx-gravity" />}
       {field.magicRoom && <div className="fx-magicroom" />}
+      {field.magicRoom && <div className="fx-magicroom-tint" />}
       {field.wonderRoom && <div className="fx-wonderroom" />}
       <canvas ref={canvas} className="fx-canvas" />
     </div>

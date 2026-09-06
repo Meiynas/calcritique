@@ -199,6 +199,11 @@ export interface MoveResult {
   koTrue: number[]
   desc: string
   rolls: number[]
+  /** Dégâts min / max en cas de coup critique */
+  critMin: number
+  critMax: number
+  /** Multiplicateur de type (0, 0.25, 0.5, 1, 2, 4) ; 0 aussi si l'attaque ne fait rien (immunité de talent) */
+  effectiveness: number
 }
 
 export function critChanceFor(moveName: string, attacker: Pokemon, extraStage = 0): number {
@@ -289,13 +294,16 @@ export function computeMove(
 
   const displayCrit = options.critMode === 'always' ? run(true) : null
   const [dmin, dmax] = displayCrit ? displayCrit.range() : [min, max]
+  const critRun = run(true)
+  const [critMin, critMax] = critRun.range()
+  const effectiveness = typeEffectiveness(normal.move.type, defender, max)
 
   if (blockedByProtect) {
     return {
       move: moveName, blockedByProtect, protectBypass,
       category: (info.category ?? 'Status') as MoveResult['category'], type: normal.move.type, basePower: normal.move.bp,
       spread: false, min: 0, max: 0, minPct: 0, maxPct: 0, maxHP, curHP, accuracy: acc, critChance,
-      koRollsOnly: koRollsOnly.map(() => 0), koTrue: koTrue.map(() => 0), desc: '', rolls: [],
+      koRollsOnly: koRollsOnly.map(() => 0), koTrue: koTrue.map(() => 0), desc: '', rolls: [], critMin: 0, critMax: 0, effectiveness,
     }
   }
 
@@ -319,7 +327,21 @@ export function computeMove(
     koTrue,
     desc,
     rolls,
+    critMin,
+    critMax,
+    effectiveness,
   }
+}
+
+/** Multiplicateur de type d'une attaque sur un défenseur (Téra pris en compte) ; 0 si les dégâts sont nuls. */
+export function typeEffectiveness(moveType: string, defender: Pokemon, maxDamage: number): number {
+  if (maxDamage <= 0) return 0
+  const atkType = gen.types.get(toID(moveType))
+  if (!atkType) return 1
+  const defTypes: string[] = defender.teraType ? [defender.teraType] : (defender.types as string[])
+  let mult = 1
+  for (const ty of defTypes) mult *= atkType.effectiveness[ty as never] ?? 1
+  return mult
 }
 
 // ---------- Vitesse ----------

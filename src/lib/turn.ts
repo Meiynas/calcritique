@@ -19,6 +19,9 @@ export const TAILWIND = ['Tailwind']
 /** Attaques qui baissent la Vitesse de la cible à coup sûr (−1) */
 export const SPEED_DROP_MOVES = ['Icy Wind', 'Electroweb', 'Bulldoze', 'Rock Tomb', 'Mud Shot', 'Low Sweep', 'Glaciate', 'Pounce', 'Bleakwind Storm', 'Drum Beating']
 export const FIRST_TURN_ONLY = ['Fake Out', 'First Impression']
+/** Attaques qui paralysent à coup sûr (la Vitesse est divisée par 2 pour la suite du tour) */
+export const PARALYSIS_MOVES = ['Thunder Wave', 'Stun Spore', 'Glare', 'Nuzzle']
+const POWDER_MOVES = ['Stun Spore']
 
 export interface Action {
   actor: Slot
@@ -48,6 +51,8 @@ export interface Hit {
   blockedBy?: 'protect' | 'wideGuard' | 'quickGuard'
   redirected: boolean
   helpingHand: boolean
+  /** La cible a été paralysée par cette frappe */
+  paralyzed?: boolean
   detail: MoveResult | null
 }
 
@@ -57,7 +62,7 @@ export interface ScenarioAction {
   position: number
   skipped: 'fainted' | null
   /** Effet spécial de l'action (clé de traduction) */
-  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly'
+  effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'paralyzeFail'
   hits: Hit[]
 }
 
@@ -161,6 +166,20 @@ function pickDamage(kind: ScenarioKind, ours: boolean, normal: MoveResult, crit:
   return { damage: median, missed: false, crit: false }
 }
 
+/** La cible peut-elle être paralysée par cette attaque ? (types, talents, terrain, statut déjà présent) */
+export function canParalyze(moveName: string, target: PokemonState, field: FieldState): boolean {
+  if (target.status) return false
+  const mon = buildPokemon(target)
+  const types = mon.types as string[]
+  if (types.includes('Electric')) return false
+  if (moveName === 'Thunder Wave' && types.includes('Ground')) return false
+  if (POWDER_MOVES.includes(moveName) && (types.includes('Grass') || target.ability === 'Overcoat' || target.item === 'Safety Goggles')) return false
+  if (target.ability === 'Good as Gold' && moveName !== 'Nuzzle') return false
+  if (['Limber', 'Comatose', 'Purifying Salt'].includes(target.ability)) return false
+  if (field.terrain === 'Misty' && !types.includes('Flying') && target.ability !== 'Levitate' && target.item !== 'Air Balloon') return false
+  return true
+}
+
 export function simulateTurn(state: AppState): TurnResult {
   const order = turnOrder(state)
   const kinds: ScenarioKind[] = ['best', 'average', 'worst']
@@ -216,6 +235,19 @@ export function simulateTurn(state: AppState): TurnResult {
       if (FIRST_TURN_ONLY.includes(action.move)) effect = 'firstTurnOnly'
 
       const hits: Hit[] = []
+      // Attaque de statut qui paralyse (Cage Éclair, Para-Spore, Regard Médusant)
+      if (action.isStatus && PARALYSIS_MOVES.includes(action.move)) {
+        const target = action.targets.find((tg) => !hp[slotKey(tg)]?.fainted)
+        if (target) {
+          const tk = slotKey(target)
+          const tp = mons[tk]
+          const blocked = target.side !== side && (tp.protect || (action.priority > 0 && guard[target.side].quick))
+          if (!blocked && canParalyze(action.move, tp, field)) {
+            mons[tk] = { ...tp, status: 'par' }
+            effect = 'paralyze'
+          } else effect = 'paralyzeFail'
+        }
+      }
       if (!action.isStatus) {
         const info = moveInfo(action.move)
         // Redirection : attaque mono-cible visant l'ennemi -> Par Ici / Poudre Fureur
@@ -256,7 +288,12 @@ export function simulateTurn(state: AppState): TurnResult {
           const dmg = Math.min(cur.hp, pick.damage)
           const after = cur.hp - dmg
           const ko = after <= 0
-          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false })
+          let paralyzed = false
+          if (!pick.missed && !ko && PARALYSIS_MOVES.includes(action.move) && canParalyze(action.move, mons[tk], field)) {
+            mons[tk] = { ...mons[tk], status: 'par' }
+            paralyzed = true
+          }
+          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, paralyzed })
           hp[tk] = { hp: Math.max(0, after), maxHP: cur.maxHP, fainted: ko }
           // Baisse de Vitesse garantie : l'ordre sera recalculé pour les actions suivantes
           if (!pick.missed && !ko && SPEED_DROP_MOVES.includes(action.move)) {

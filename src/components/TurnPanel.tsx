@@ -108,6 +108,7 @@ function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
           <span className={'font-semibold tabular-nums ' + (hit.ko ? 'text-accent' : '')}>−{pct}%</span>
           {hit.crit && <span className="text-amber-300">{t.critShort}</span>}
           {hit.helpingHand && <span className="text-amber-200">🤝</span>}
+          {hit.paralyzed && <span className="text-yellow-300">⚡ {t.paralyzedHit}</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>
           {hit.ko && <span className="font-bold text-accent">KO</span>}
         </>

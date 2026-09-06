@@ -106,20 +106,81 @@ export default function Results({ results, attacker, defender, lang, activeMove,
             </tbody>
           </table>
 
-          {r.rolls.length > 1 && (
-            <div className="mt-2 flex h-6 items-end gap-px" title={r.rolls.join(', ')}>
-              {r.rolls.map((d, i) => (
-                <div key={i} className={'flex-1 rounded-t ' + (d >= r.curHP ? 'bg-emerald-400/70' : 'bg-white/20')} style={{ height: `${Math.max(8, (d / Math.max(...r.rolls)) * 100)}%` }} />
-              ))}
-            </div>
-          )}
-
-          <p className="mt-2 text-[11px] text-muted">
-            {describe(attacker, lang, true, r.category)} → {describe(defender, lang, false, r.category)}
+          {r.max > 0 && <DamageGauge r={r} lang={lang} />}
+          <p className="mt-2 text-[11px]">
+            <span className={effClass(r.effectiveness)}>{effLabel(r.effectiveness, lang)}</span>
+            <span className="ml-2 text-muted">{describe(attacker, lang, true, r.category)} → {describe(defender, lang, false, r.category)}</span>
           </p>
         </article>
       ))}
       </div>
     </section>
+  )
+}
+
+const THRESHOLDS = [25, 33.4, 50, 100]
+
+function effLabel(m: number, lang: Lang): string {
+  const t = dict(lang)
+  if (m === 0) return t.eff.none
+  if (m >= 4) return `${t.eff.super4} (×4)`
+  if (m >= 2) return `${t.eff.super2} (×2)`
+  if (m <= 0.25) return `${t.eff.weak4} (×0,25)`
+  if (m <= 0.5) return `${t.eff.weak2} (×0,5)`
+  return t.eff.neutral
+}
+function effClass(m: number): string {
+  if (m === 0) return 'text-muted'
+  if (m >= 2) return 'text-emerald-300 font-semibold'
+  if (m < 1) return 'text-orange-300'
+  return 'text-text'
+}
+
+/** Double jauge : (1) dégâts en % des PV max avec bande normale et bande critique, repères 25 / 33,4 / 50 / 100 ;
+    (2) chances : raté / touche / critique. */
+function DamageGauge({ r, lang }: { r: MoveResult; lang: Lang }) {
+  const t = dict(lang)
+  const pct = (v: number) => Math.min(100, (v / r.maxHP) * 100)
+  const nMin = pct(r.min), nMax = pct(r.max), cMin = pct(r.critMin), cMax = pct(r.critMax)
+  const hit = r.accuracy.base === null ? 1 : r.accuracy.effective / 100
+  const critP = hit * r.critChance
+  const missP = 1 - hit
+  const normalP = hit - critP
+  const curPct = pct(r.curHP)
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      <div className="flex items-center gap-2 text-[10px] text-muted">
+        <span className="w-14 shrink-0">{t.gaugeDamage}</span>
+        <div className="relative h-4 flex-1 rounded bg-white/10">
+          {/* bande critique (derrière) puis bande normale */}
+          <div className="absolute inset-y-0 rounded bg-amber-400/45" style={{ left: `${cMin}%`, width: `${Math.max(0.8, cMax - cMin)}%` }} title={`${t.critShort} ${Math.floor(cMin * 10) / 10}% – ${Math.floor(cMax * 10) / 10}%`} />
+          <div className="absolute inset-y-0 rounded bg-white/70" style={{ left: `${nMin}%`, width: `${Math.max(0.8, nMax - nMin)}%` }} title={`${Math.floor(nMin * 10) / 10}% – ${Math.floor(nMax * 10) / 10}%`} />
+          {THRESHOLDS.map((th) => (
+            <div key={th} className="absolute inset-y-0 border-l border-dashed border-white/40" style={{ left: `${Math.min(99.6, th)}%` }} />
+          ))}
+          {curPct < 100 && <div className="absolute inset-y-0 border-l-2 border-accent" style={{ left: `${curPct}%` }} title={t.hp} />}
+        </div>
+      </div>
+      <div className="ml-16 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
+        {THRESHOLDS.map((th) => {
+          const sure = nMin >= th, possible = nMax >= th, critOnly = !possible && cMax >= th
+          const cls = sure ? 'text-emerald-300 font-semibold' : possible ? 'text-amber-300' : critOnly ? 'text-amber-200/70' : 'text-muted'
+          const mark = sure ? '✓' : possible ? '~' : critOnly ? 'crit' : '✗'
+          return <span key={th} className={cls}>{th === 100 ? 'KO' : th === 33.4 ? '33,4 %' : th + ' %'} {mark}</span>
+        })}
+      </div>
+      <div className="flex items-center gap-2 text-[10px] text-muted">
+        <span className="w-14 shrink-0">{t.gaugeChances}</span>
+        <div className="flex h-3 flex-1 overflow-hidden rounded bg-white/10">
+          {missP > 0 && <div className="bg-orange-400/70" style={{ width: `${missP * 100}%` }} title={`${t.missed} ${Math.round(missP * 100)}%`} />}
+          <div className="bg-emerald-400/70" style={{ width: `${normalP * 100}%` }} title={`${t.hitLabel} ${Math.round(normalP * 100)}%`} />
+          {critP > 0 && <div className="bg-amber-400/80" style={{ width: `${critP * 100}%` }} title={`${t.critShort} ${Math.round(critP * 1000) / 10}%`} />}
+        </div>
+        <span className="w-32 shrink-0 text-right tabular-nums">
+          {missP > 0 && <span className="text-orange-300">{Math.round(missP * 100)}% {t.missed} · </span>}
+          <span className="text-amber-300">{Math.round(critP * 1000) / 10}% {t.critShort}</span>
+        </span>
+      </div>
+    </div>
   )
 }

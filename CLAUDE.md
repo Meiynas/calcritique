@@ -202,6 +202,15 @@ Ajouté en v1.4.0 (retours du 6 septembre 2026, VGC) :
 - Attaques à cibles multiples : le x0,75 ne s'applique que s'il y a vraiment plusieurs cibles (une seule cible vivante = pas de réduction). En 1v1 le moteur passe en Singles (Protection / Mur Lumière / Voile Aurore divisent par 2) ; en 2v2 les murs réduisent d'un tiers (2/3) comme en VGC.
 - Déroulé du tour, mécaniques VGC (src/lib/turn.ts) : Abri / Détection et variantes, Garde Large (bloque les attaques à cibles multiples sur son côté), Anti-Air (bloque les attaques prioritaires), Coup d'Main (l'allié frappe x1,5, icône 🤝), Par Ici / Poudre Fureur (redirige les attaques mono-cible adverses, "↪ redirigée"), Ruse perce Abri, Vent Arrière posé en cours de tour, baisses de Vitesse garanties (Vent Glacé, Toile Élek, Piétisol, Tomberoche, Tir de Boue, Balayette, Glaciation, Bondissement, Tempête Nordique, Tambour Battant), Bluff / Première Impression signalées "premier tour seulement". Vitesse dynamique : l'ordre est recalculé après chaque action (badge violet "3e" quand la position réelle diffère de l'ordre de départ).
 
+Ajouté en v1.5.0 (retours du 6 septembre 2026, lisibilité) :
+- Colonne "Nat." des + / − placée à gauche des noms de stats, largeurs de colonnes fixes (le tableau ne bouge plus), nature neutre possible (cliquer le + ou le − déjà actif le retire).
+- Détail par attaque : la barre des 16 rolls est remplacée par une double jauge. "Dégâts" : la fourchette normale (blanc) et la fourchette critique (ambre) sur 0 à 100 % des PV max, avec des repères à 25 %, 33,4 %, 50 % et KO (✓ atteint sur les rolls, ~ possible en critique, ✗ jamais). "Chances" : raté / touché / critique. Une ligne d'efficacité (Super efficace x2, Hyper efficace x4, Peu efficace, Sans effet...) remplace le petit texte sous la jauge.
+- Mode 2v2 : boutons "Stats" / "Attaques (A et B)" au-dessus de la fiche du Pokémon. La vue Attaques montre seulement les 4 attaques et les puces de cible des deux Pokémon en jeu (A et B), pour régler le tour sans faire défiler.
+- Le bandeau "Équipe 1 · En jeu" a été retiré (les positions A / B se suffisent).
+- Paralysie en cours de tour : Cage Éclair, Para-Spore, Regard Médusant et Nuzzle paralysent la cible (immunités : type Électrik, Sol contre Cage Éclair, Plante / Envelocape / Lunettes Filtre contre les poudres, Échauffement, Terrain Brumeux, statut déjà présent, Abri), sa Vitesse est divisée par 2 pour la suite du tour et l'ordre est recalculé. Le Vent Arrière posé en cours de tour accélérait déjà l'allié qui joue après (badge violet de position).
+- Zone Magique : l'animation tourne autour du centre de l'écran sans coupure (carré de 200 % de l'écran).
+- Test automatique ajouté pour la paralysie (13 tests).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -217,6 +226,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.5.0 : colonne Nat. à gauche et nature neutre, double jauge dégâts / chances avec seuils et efficacité, vue "Attaques (A et B)" en 2v2, paralysie en cours de tour, Zone Magique corrigée.
 - 2026-09-06 : v1.4.0 : nature par + / −, positions A / B, cibles en puces, x0,75 selon le nombre de cibles, murs Singles / Doubles, attaques de soutien VGC dans le déroulé avec vitesse dynamique.
 - 2026-09-06 : v1.3.0 : format 1v1 / 2v2, Pokémon en jeu par équipe, déroulé du tour avec trois scénarios, détail par attaque. Fin des rôles attaquant / défenseur.
 - 2026-09-06 : v1.2.2 : PV saisissables à la main sur les cartes, bouton Switch (pièges, poison, Toile Gluante, remise à zéro).
