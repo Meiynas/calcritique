@@ -307,6 +307,12 @@ export function MovesOnlyPanel({ pos, value, onChange, targetOptions, role, lang
         ))}
       </div>
       {targetOptions && <TargetChips value={value} options={targetOptions} onChange={(tg) => onChange({ ...value, target: tg })} lang={lang} />}
+      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted">
+        <span>{t.status} :</span>
+        <select className="rounded border border-border bg-surface-2 px-1 py-0.5 text-text" value={value.status} onChange={(e) => onChange({ ...value, status: e.target.value as StatusKey })}>
+          {STATUSES.map((s) => <option key={s} value={s}>{t.statusNames[s]}</option>)}
+        </select>
+      </div>
       {slot !== null && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(slot, m); setSlot(null) }} onClose={() => setSlot(null)} />
       )}

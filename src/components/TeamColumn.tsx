@@ -120,7 +120,7 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
               key={v}
               type="button"
               onClick={() => setView(v)}
-              className={'flex-1 rounded-md border px-2 py-1 text-xs font-semibold ' + (view === v ? 'border-accent bg-accent/20 text-text' : 'border-border bg-surface-2 text-muted hover:text-text')}
+              className={'flex-1 rounded-md border px-2 py-1 text-xs font-semibold ' + (view === v ? (side === 'left' ? 'border-accent bg-accent/20 text-text' : 'border-sky-400 bg-sky-400/20 text-text') : 'border-border bg-surface-2 text-muted hover:text-text')}
             >
               {v === 'stats' ? t.viewStats : t.viewMoves}
             </button>

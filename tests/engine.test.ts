@@ -171,3 +171,27 @@ test('tour : Cage Éclair paralyse et divise la Vitesse pour la suite du tour ; 
   assert.ok(!canParalyze('Stun Spore', defaultPokemon('Rillaboom'), field))
   assert.ok(canParalyze('Glare', defaultPokemon('Garchomp'), field))
 })
+
+test('tour : Bluff fait tressaillir la cible (elle n\'agit pas), un Pokémon gelé n\'agit pas sauf avec Boutefeu', async () => {
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { defaultState } = await import('../src/model')
+  const st = defaultState()
+  st.mode = '2v2'
+  st.teams.left[0] = defaultPokemon('Incineroar', { moves: ['Fake Out', '', '', ''], target: 0 })
+  st.teams.left[1] = defaultPokemon('Garchomp', { moves: ['Protect', '', '', ''] })
+  st.teams.right[0] = defaultPokemon('Toxapex', { sp: { hp: 32, atk: 0, def: 32, spa: 0, spd: 0, spe: 0 }, moves: ['Kowtow Cleave', '', '', ''] })
+  st.teams.right[1] = defaultPokemon('Arcanine', { status: 'frz', moves: ['Flare Blitz', '', '', ''] })
+  st.active = { left: [0, 1], right: [0, 1] }
+  const r = simulateTurn(st)
+  for (const k of ['best', 'average', 'worst'] as const) {
+    const king = r.scenarios[k].actions.find((a) => a.action.move === 'Kowtow Cleave')!
+    assert.equal(king.skipped, 'flinch', k)
+    const arc = r.scenarios[k].actions.find((a) => a.action.move === 'Flare Blitz')!
+    assert.equal(arc.skipped, null, k) // Boutefeu dégèle son lanceur
+  }
+  st.teams.right[1].moves[0] = 'Extreme Speed'
+  const r2 = simulateTurn(st)
+  assert.equal(r2.scenarios.average.actions.find((a) => a.action.move === 'Extreme Speed')!.skipped, 'frz')
+  assert.equal(r2.scenarios.best.actions.find((a) => a.action.move === 'Extreme Speed')!.skipped, 'frz')
+  assert.equal(r2.scenarios.worst.actions.find((a) => a.action.move === 'Extreme Speed')!.skipped, null)
+})

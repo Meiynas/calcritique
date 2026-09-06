@@ -22,6 +22,10 @@ export default function TurnPanel({ state, turn, lang }: Props) {
   if (turn.order.length === 0) {
     return <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">{t.noPair}</div>
   }
+  // Lignes du tableau dans l'ordre réel du scénario moyen (vitesse dynamique)
+  const rows = turn.order
+    .map((a) => ({ a, pos: (turn.scenarios.average.actions.find((x) => slotKey(x.action.actor) === slotKey(a.actor))?.position ?? 1) - 1 }))
+    .sort((x, y) => x.pos - y.pos)
 
   return (
     <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
@@ -61,7 +65,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
             </tr>
           </thead>
           <tbody>
-            {turn.order.map((a, i) => (
+            {rows.map(({ a, pos: i }) => (
               <tr key={slotKey(a.actor)} className="border-t border-border/60 align-top">
                 <td className="py-1.5 pr-1.5">
                   <div className={'font-semibold ' + sideColor(a.actor)}>{i + 1}. {name(a.actor)}</div>
@@ -73,6 +77,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                     <td key={k} className="py-1.5 px-1.5">
                       {sa.position !== i + 1 && <span className="mr-1 rounded bg-violet-500/30 px-1 text-[10px] text-violet-200" title={t.reordered}>{sa.position}{lang === 'fr' ? 'e' : 'th'}</span>}
                       {sa.skipped === 'fainted' && <span className="text-muted italic">{t.skippedFainted}</span>}
+                      {sa.skipped && sa.skipped !== 'fainted' && <span className="text-yellow-300 italic">{t.skippedReason[sa.skipped]}</span>}
                       {!sa.skipped && sa.effect && <span className="text-emerald-300 italic">{t.effects[sa.effect]}</span>}
                       {!sa.skipped && !sa.effect && a.isStatus && <span className="text-muted italic">{t.statusMove}</span>}
                       {!sa.skipped && !a.isStatus && sa.hits.length === 0 && <span className="text-muted italic">{t.noTarget}</span>}
@@ -109,6 +114,8 @@ function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
           {hit.crit && <span className="text-amber-300">{t.critShort}</span>}
           {hit.helpingHand && <span className="text-amber-200">🤝</span>}
           {hit.paralyzed && <span className="text-yellow-300">⚡ {t.paralyzedHit}</span>}
+          {hit.flinched && <span className="text-yellow-300">💫 {t.flinchedHit}</span>}
+          {hit.thawed && <span className="text-sky-300">🔥 {t.thawedHit}</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>
           {hit.ko && <span className="font-bold text-accent">KO</span>}
         </>

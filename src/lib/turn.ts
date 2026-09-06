@@ -7,6 +7,7 @@
 import type { AppState, FieldState, PokemonState, SideKey } from '../model'
 import { otherSide } from '../model'
 import { buildPokemon, computeMove, effectiveSpeed, moveInfo, movePriority, PROTECT_MOVES, type MoveResult } from './engine'
+import { cantActChance, flinchChance, SELF_THAW_MOVES, thawsTarget } from './status'
 
 export interface Slot { side: SideKey; index: number }
 export const slotKey = (s: Slot) => `${s.side}:${s.index}`
@@ -53,6 +54,10 @@ export interface Hit {
   helpingHand: boolean
   /** La cible a été paralysée par cette frappe */
   paralyzed?: boolean
+  /** La cible tressaille (flinch) : elle n'agira pas ce tour */
+  flinched?: boolean
+  /** La cible est dégelée par cette frappe */
+  thawed?: boolean
   detail: MoveResult | null
 }
 
@@ -60,7 +65,7 @@ export interface ScenarioAction {
   action: Action
   /** Position réelle dans ce scénario (1 = premier) */
   position: number
-  skipped: 'fainted' | null
+  skipped: 'fainted' | 'flinch' | 'par' | 'slp' | 'frz' | null
   /** Effet spécial de l'action (clé de traduction) */
   effect?: 'protect' | 'wideGuard' | 'quickGuard' | 'helpingHand' | 'redirect' | 'tailwind' | 'firstTurnOnly' | 'paralyze' | 'paralyzeFail'
   hits: Hit[]
@@ -196,6 +201,7 @@ export function simulateTurn(state: AppState): TurnResult {
       right: { wide: false, quick: false, redirect: null },
     }
     const helping: Record<string, boolean> = {} // clé d'emplacement -> Coup d'Main reçu ce tour
+    const flinched: Record<string, boolean> = {} // clé d'emplacement -> tressaille ce tour
     for (const side of ['left', 'right'] as SideKey[]) {
       for (const slot of activeSlots(state, side)) {
         const p = state.teams[side][slot.index]
@@ -220,6 +226,19 @@ export function simulateTurn(state: AppState): TurnResult {
       if (hp[ak]?.fainted) { done.push({ action, position, skipped: 'fainted', hits: [] }); continue }
       const side = action.actor.side
       const foe = otherSide(side)
+      const ours = side === 'left'
+      // Tressaillement (flinch) subi plus tôt dans le tour
+      if (flinched[ak]) { done.push({ action, position, skipped: 'flinch', hits: [] }); continue }
+      // Statut qui empêche d'agir : selon le scénario, l'issue favorable à l'équipe 1 est retenue
+      const ca = cantActChance(mons[ak], action.move)
+      if (ca.reason) {
+        const favorable = kind === 'best' ? ours : kind === 'worst' ? !ours : null
+        const skip = ca.chance >= 1 || (ca.chance > 0 && (favorable === false || (favorable === null && ca.chance > 0.5)))
+        if (skip) { done.push({ action, position, skipped: ca.reason, hits: [] }); continue }
+        // Il agit : réveil / dégel (la paralysie reste)
+        if (ca.reason !== 'par') mons[ak] = { ...mons[ak], status: '' }
+      }
+      if (mons[ak].status === 'frz' && SELF_THAW_MOVES.includes(action.move)) mons[ak] = { ...mons[ak], status: '' }
       let effect: ScenarioAction['effect']
 
       // Effets de soutien
@@ -289,11 +308,24 @@ export function simulateTurn(state: AppState): TurnResult {
           const after = cur.hp - dmg
           const ko = after <= 0
           let paralyzed = false
-          if (!pick.missed && !ko && PARALYSIS_MOVES.includes(action.move) && canParalyze(action.move, mons[tk], field)) {
-            mons[tk] = { ...mons[tk], status: 'par' }
-            paralyzed = true
+          let thawed = false
+          let flinch = false
+          if (!pick.missed && !ko) {
+            if (mons[tk].status === 'frz' && thawsTarget(action.move)) { mons[tk] = { ...mons[tk], status: '' }; thawed = true }
+            if (PARALYSIS_MOVES.includes(action.move) && canParalyze(action.move, mons[tk], field)) {
+              mons[tk] = { ...mons[tk], status: 'par' }
+              paralyzed = true
+            }
+            // Flinch : seulement si la cible n'a pas encore agi ce tour
+            const pending = remaining.find((r) => slotKey(r.actor) === tk)
+            if (pending && target.side !== side) {
+              let fc = flinchChance(action.move, attackerState, mons[tk])
+              if (action.move === 'Upper Hand' && pending.priority <= 0) fc = 0
+              const favorable = kind === 'best' ? ours : kind === 'worst' ? !ours : null
+              if (fc >= 1 || (fc > 0 && favorable === true)) { flinched[tk] = true; flinch = true }
+            }
           }
-          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, paralyzed })
+          hits.push({ ...base, damage: dmg, hpAfter: Math.max(0, after), ko, missed: pick.missed, crit: pick.crit, blocked: false, paralyzed, flinched: flinch, thawed })
           hp[tk] = { hp: Math.max(0, after), maxHP: cur.maxHP, fainted: ko }
           // Baisse de Vitesse garantie : l'ordre sera recalculé pour les actions suivantes
           if (!pick.missed && !ko && SPEED_DROP_MOVES.includes(action.move)) {
