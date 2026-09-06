@@ -268,6 +268,13 @@ Ajouté en v1.9.2 (retours du 6 septembre 2026) :
 - Équipes : boutons 💾 (enregistrer les 6 Pokémon de la colonne) et 📂 (ouvrir la bibliothèque sur l'onglet Équipes) en haut de chaque colonne, à côté des pièges. Texte d'aide dans l'onglet Équipes.
 - Speed tiers : les variantes d'un même Pokémon plus lentes que moi sont aussi regroupées (sur la plus rapide d'entre elles, badge +N), comme celles hors de portée. Texte d'explication dans "Gérer la liste" (Pokémon comparés).
 
+Ajouté en v1.10.0 (retours du 6 septembre 2026) :
+- "Set le plus joué" renommé "Set automatique" (infobulle : assemble le numéro 1 de chaque catégorie d'usage). Même nom dans les speed tiers.
+- Speed tiers : plus de liste à gérer, TOUS les Pokémon du pool Champions (335) sont comparés, avec un champ de filtre par nom ; le bouton ⚙ ne règle plus que les variantes (calcritique.speedtiers.v3).
+- Mise en page : titre et phrase d'explication du déroulé du tour sortis de la boîte (comme "Détail par attaque") ; la phrase sur le vrai taux de KO est sous les blocs de détail.
+- Table des types (bouton 🧬 dans l'en-tête, TypeChartModal.tsx) : onglet Défense = pour chaque type d'attaque, multiplicateur subi par chaque Pokémon de l'équipe (types actuels, Téra si ON, talents : Lévitation, Absorb Volt / Paratonnerre / Motorisé, Absorb Eau / Lavabo / Peau Sèche, Torche / Corps Bien Cuit, Herbivore, Mangeterre, Ballon, Isograisse, Ignifu-Voile, Sel Purificateur, Boule de Poils) avec colonnes ↓ faibles, ↑ résistants, = bilan. Onglet Attaque = pour chaque type cible, la meilleure efficacité des attaques offensives de chaque Pokémon (points de couleur = types de ses attaques) et le meilleur de l'équipe.
+- Sources d'équipes vérifiées le 6 septembre 2026 : pokebase.app/pokemon-champions/teams liste des équipes de tournoi (filtres par Pokémon, attaques, placement) mais sans API ni export ; championsbattledata n'a pas d'équipes. Une base d'équipes demanderait une collecte via le navigateur, à décider avec l'humain.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -283,6 +290,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.10.0 : set automatique, speed tiers sur tout le pool avec filtre, en-têtes hors des boîtes, table des types défense / attaque.
 - 2026-09-06 : v1.9.2 : composeur de sets populaires (usage), boutons équipe 💾 / 📂 dans les colonnes, fusion des variantes plus lentes dans les speed tiers. Constat : pas de sets complets ni d'équipes dans l'API d'usage.
 - 2026-09-06 : v1.9.1 : nuage pour Brumeux, "Mes sets" dans la fiche, bouton Speed tiers dans les stats, speed tiers avec set le plus joué, Mouchoir pour tous et fusion des variantes hors de portée.
 - 2026-09-06 : v1.9.0 : conditions de combat en bandeau compact en haut, Téra ON / OFF, bibliothèque de sets et d'équipes (export / import JSON), speed tiers personnalisés, vue "Scénario probable" du déroulé.

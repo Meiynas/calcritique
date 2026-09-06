@@ -34,8 +34,8 @@ export default function TurnPanel({ state, turn, lang }: Props) {
     .sort((x, y) => x.pos - y.pos)
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{t.turnTitle}</h2>
         <div className="flex overflow-hidden rounded border border-border text-[11px]">
           {(['likely', 'all'] as const).map((v) => (
@@ -43,7 +43,8 @@ export default function TurnPanel({ state, turn, lang }: Props) {
           ))}
         </div>
       </div>
-      <span className="-mt-2 text-[11px] text-muted">{view === 'all' ? t.turnHint : t.likelyHint}</span>
+      <p className="px-1 text-[11px] text-muted">{view === 'all' ? t.turnHint : t.likelyHint}</p>
+    <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
 
       {/* Ordre des actions */}
       <ol className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -136,6 +137,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
         </table>
       </div>
     </section>
+    </div>
   )
 }
 

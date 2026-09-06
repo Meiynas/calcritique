@@ -125,7 +125,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
           {label('species', value.species, lang)}
           <span className="ml-2 text-[11px] font-normal text-muted">{t.change}</span>
         </button>
-        <button type="button" onClick={() => onChange({ ...mostPlayedSet(value.species), activeMove: 0 })} title={t.applyMostPlayed} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
+        <button type="button" onClick={() => onChange({ ...mostPlayedSet(value.species), activeMove: 0 })} title={t.applyMostPlayedHint} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
           ★ {t.applyMostPlayed}
         </button>
         {savedSets.length > 0 && (

@@ -9,6 +9,7 @@ import { switchIn } from './lib/switch'
 import { cleanSet, loadLibrary, newId, saveLibrary, type Library } from './lib/library'
 import LibraryModal from './components/LibraryModal'
 import SpeedTiersModal from './components/SpeedTiersModal'
+import TypeChartModal from './components/TypeChartModal'
 import { flinchChance, cantActChance } from './lib/status'
 import { label } from './lib/names'
 import TeamColumn from './components/TeamColumn'
@@ -48,6 +49,7 @@ export default function App() {
     setShowLibrary('teams')
   }
   const [showSpeed, setShowSpeed] = useState<SideKey | null>(null)
+  const [showTypes, setShowTypes] = useState(false)
   const updateLibrary = (lib: Library) => { setLibrary(lib); saveLibrary(lib) }
   const saveSet = (p: PokemonState, name: string) => updateLibrary({ ...library, sets: [{ id: newId(), name, pokemon: cleanSet(p), createdAt: Date.now() }, ...library.sets] })
 
@@ -157,6 +159,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted">
             <UpdateBadge status={update} lang={state.lang} />
+            <button type="button" onClick={() => setShowTypes(true)} className="rounded border border-border px-2 py-1 hover:text-text">🧬 {t.typeChart}</button>
             <button type="button" onClick={() => setShowSpeed('left')} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
             <button type="button" onClick={() => setShowLibrary('sets')} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
             <button type="button" onClick={reset} className="rounded border border-border px-2 py-1 hover:text-text">{t.reset}</button>
@@ -211,7 +214,6 @@ export default function App() {
             {details.filter((d) => d.result && d.result.category !== 'Status').length > 0 && (
               <section className="flex flex-col gap-3">
                 <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted">{t.detailsTitle}</h2>
-                <p className="px-1 -mt-2 text-[11px] text-muted">{t.koExplain}</p>
                 {details.map((d) =>
                   d.result && d.result.category !== 'Status' ? (
                     <div key={`${d.actor.side}:${d.actor.index}>${d.target.side}:${d.target.index}`}>
@@ -223,6 +225,7 @@ export default function App() {
                     </div>
                   ) : null,
                 )}
+                <p className="px-1 text-[11px] text-muted">{t.koExplain}</p>
               </section>
             )}
 
@@ -232,6 +235,7 @@ export default function App() {
         </div>
       </main>
 
+      {showTypes && <TypeChartModal state={state} lang={state.lang} onClose={() => setShowTypes(false)} />}
       {showSpeed && <SpeedTiersModal state={state} lang={state.lang} initialSide={showSpeed} onClose={() => setShowSpeed(null)} />}
       {showLibrary && (
         <LibraryModal

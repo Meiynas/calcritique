@@ -1,30 +1,27 @@
-// Speed tiers : où se situe la Vitesse du Pokémon sélectionné par rapport à une liste de référence choisie par l'utilisateur.
-// Chaque Pokémon de référence peut apparaître en plusieurs variantes (0 SP, 32 SP, nature +, Mouchoir Choix, Vent Arrière, paralysie).
+// Speed tiers : où se situe la Vitesse du Pokémon sélectionné par rapport à TOUS les Pokémon du pool Champions.
+// Chaque Pokémon apparaît en plusieurs variantes (0 SP, 32 SP, 32 SP nature +, set automatique), avec fusion des variantes sans intérêt.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppState, Lang, PokemonState, SideKey } from '../model'
 import { dict } from '../i18n'
-import { label } from '../lib/names'
+import { label, normalize } from '../lib/names'
 import { buildPokemon, effectiveSpeed, finalStats, speciesInfo } from '../lib/engine'
 import { statAt50 } from '../lib/champions'
-import { LEGAL_SPECIES, mostPlayedSet, usageRank } from '../lib/usage'
+import { LEGAL_SPECIES, mostPlayedSet } from '../lib/usage'
 import Modal from './Modal'
-import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
 import { SPRITES } from './Tooltips'
 
 export type VariantKey = 'neutral0' | 'neutral32' | 'max' | 'mostPlayed'
 export interface SpeedTiersConfig {
-  species: string[]
   variants: Record<VariantKey, boolean>
   /** Mouchoir Choix donné à tous les Pokémon comparés (x1,5) */
   scarfAll: boolean
 }
-const KEY = 'calcritique.speedtiers.v2'
+const KEY = 'calcritique.speedtiers.v3'
 const ALL_VARIANTS: VariantKey[] = ['neutral0', 'neutral32', 'max', 'mostPlayed']
 
 export function defaultSpeedTiers(): SpeedTiersConfig {
-  const species = [...LEGAL_SPECIES].sort((a, b) => usageRank(b) - usageRank(a)).slice(0, 30)
-  return { species, variants: { neutral0: true, neutral32: true, max: true, mostPlayed: true }, scarfAll: false }
+  return { variants: { neutral0: true, neutral32: true, max: true, mostPlayed: true }, scarfAll: false }
 }
 export function loadSpeedTiers(): SpeedTiersConfig {
   try {
@@ -32,7 +29,7 @@ export function loadSpeedTiers(): SpeedTiersConfig {
     if (!raw) return defaultSpeedTiers()
     const p = JSON.parse(raw) as Partial<SpeedTiersConfig>
     const d = defaultSpeedTiers()
-    return { species: Array.isArray(p.species) ? p.species.filter((s) => typeof s === 'string' && speciesInfo(s)) : d.species, variants: { ...d.variants, ...(p.variants ?? {}) }, scarfAll: !!p.scarfAll }
+    return { variants: { ...d.variants, ...(p.variants ?? {}) }, scarfAll: !!p.scarfAll }
   } catch {
     return defaultSpeedTiers()
   }
@@ -73,6 +70,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
   const [config, setConfig] = useState<SpeedTiersConfig>(() => loadSpeedTiers())
   const [side, setSide] = useState<SideKey>(initialSide ?? 'left')
   const [manage, setManage] = useState(false)
+  const [q, setQ] = useState('')
   const update = (c: SpeedTiersConfig) => { setConfig(c); saveSpeedTiers(c) }
 
   const me: PokemonState = state.teams[side][state.selected[side]]
@@ -99,7 +97,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
 
   const rows = useMemo(() => {
     const all: Row[] = []
-    for (const sp of config.species) {
+    for (const sp of LEGAL_SPECIES) {
       for (const v of ALL_VARIANTS) {
         if (!config.variants[v]) continue
         const r = variantRow(sp, v, lang)
@@ -135,10 +133,12 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, lang, mySpeed, myInfo, natureMod, factor])
 
+  const nq = normalize(q)
+  const shown = nq ? rows.filter((r) => normalize(label('species', r.species, lang)).includes(nq) || normalize(r.species).includes(nq)) : rows
   const faster = rows.filter((r) => r.speed > mySpeed).length
   const slower = rows.filter((r) => r.speed < mySpeed).length
   const ties = rows.filter((r) => r.speed === mySpeed).length
-  const inserted = rows.findIndex((r) => r.speed <= mySpeed)
+  const inserted = shown.findIndex((r) => r.speed <= mySpeed)
 
   return (
     <Modal title={t.speedTiers} onClose={onClose} wide>
@@ -156,6 +156,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
             <span className="text-muted">{t.speedTiersMine(faster, ties, slower)}</span>
           </span>
         )}
+        <input className="input !w-44 !py-0.5" placeholder={t.speedTiersSearch} value={q} onChange={(e) => setQ(e.target.value)} />
         <label className="ml-auto flex items-center gap-1" title={t.speedScarfAllHint}>
           <input type="checkbox" checked={config.scarfAll} onChange={(e) => update({ ...config, scarfAll: e.target.checked })} />
           {t.speedScarfAll}
@@ -174,22 +175,6 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
               </label>
             ))}
           </div>
-          <p className="text-muted">{t.speedTiersListHint(config.species.length)}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted">{t.speedTiersAdd} :</span>
-            <SearchSelect kind="species" value="" onChange={(v) => { if (v && !config.species.includes(v)) update({ ...config, species: [...config.species, v] }) }} lang={lang} placeholder={t.searchPokemon} keys={LEGAL_SPECIES} className="w-64" />
-            <button type="button" onClick={() => update(defaultSpeedTiers())} className="rounded border border-border px-2 py-1 text-muted hover:text-text">{t.speedTiersReset}</button>
-            <button type="button" onClick={() => update({ ...config, species: [] })} className="rounded border border-border px-2 py-1 text-muted hover:text-text">{t.speedTiersClear}</button>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {config.species.map((sp) => (
-              <span key={sp} className="flex items-center gap-1 rounded border border-border bg-surface px-1.5 py-0.5">
-                {SPRITES[sp] && <img src={SPRITES[sp]} alt="" className="inline-block h-5 w-5 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                {label('species', sp, lang)}
-                <button type="button" onClick={() => update({ ...config, species: config.species.filter((x) => x !== sp) })} className="text-muted hover:text-accent">×</button>
-              </span>
-            ))}
-          </div>
         </div>
       )}
 
@@ -198,7 +183,7 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose }: P
         {rows.length === 0 && <p className="text-sm text-muted">{t.speedTiersEmpty}</p>}
         <table className="w-full text-xs">
           <tbody>
-            {rows.map((r, i) => {
+            {shown.map((r, i) => {
               const cmp = r.speed > mySpeed ? 'faster' : r.speed < mySpeed ? 'slower' : 'tie'
               const need = cmp === 'faster' ? spToBeat(r.speed) : null
               const info = speciesInfo(r.species)!
