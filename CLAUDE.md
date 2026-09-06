@@ -307,6 +307,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.11.3 : "Les 2 équipes seulement" devient une case à cocher et n'affiche que les sets actuels des Pokémon en équipe (sans variantes).
 - 2026-09-06 : v1.11.2 : bouton "Les 2 équipes seulement" dans les speed tiers (n'affiche que les espèces des deux équipes, toutes variantes).
 - 2026-09-06 : v1.11.1 : ordre des stades de Vitesse dans les speed tiers (+6 en haut, −6 en bas, comme dans la fiche).
 - 2026-09-06 : v1.11.0 : thèmes Clair et Pastel, speed tiers avec les deux équipes en couleur et réglage direct des SP / stades.

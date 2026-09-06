@@ -178,8 +178,9 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose, onU
 
   const nq = normalize(q)
   const teamSpecies = new Set([...state.teams.left, ...state.teams.right].map((p) => p.species).filter(Boolean))
+  // "Les 2 équipes seulement" : uniquement les sets actuels des Pokémon en équipe (pas de variantes)
   const shown = rows
-    .filter((r) => !teamsOnly || teamSpecies.has(r.species))
+    .filter((r) => !teamsOnly || (r.variant === 'team' && teamSpecies.has(r.species)))
     .filter((r) => !nq || normalize(label('species', r.species, lang)).includes(nq) || normalize(r.species).includes(nq))
   const faster = rows.filter((r) => r.speed > mySpeed).length
   const slower = rows.filter((r) => r.speed < mySpeed).length
@@ -203,7 +204,10 @@ export default function SpeedTiersModal({ state, lang, initialSide, onClose, onU
           </span>
         )}
         <input className="input !w-44 !py-0.5" placeholder={t.speedTiersSearch} value={q} onChange={(e) => setQ(e.target.value)} />
-        <button type="button" onClick={() => setTeamsOnly((v) => !v)} aria-pressed={teamsOnly} className={'rounded border px-2 py-1 ' + (teamsOnly ? 'border-accent bg-accent/20 text-text' : 'border-border hover:text-text')}>{t.speedTeamsOnly}</button>
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={teamsOnly} onChange={(e) => setTeamsOnly(e.target.checked)} />
+          {t.speedTeamsOnly}
+        </label>
         <label className="ml-auto flex items-center gap-1" title={t.speedScarfAllHint}>
           <input type="checkbox" checked={config.scarfAll} onChange={(e) => update({ ...config, scarfAll: e.target.checked })} />
           {t.speedScarfAll}
