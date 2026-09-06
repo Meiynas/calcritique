@@ -1,4 +1,5 @@
 // Déroulé du tour : ordre des actions et trois scénarios (meilleur / moyen / pire pour l'équipe 1).
+import { useState } from 'react'
 import type { AppState, Lang } from '../model'
 import { dict } from '../i18n'
 import { label } from '../lib/names'
@@ -14,8 +15,13 @@ interface Props {
 
 const KINDS: ScenarioKind[] = ['best', 'average', 'worst']
 
+const VIEW_KEY = 'calcritique.turnView'
+
 export default function TurnPanel({ state, turn, lang }: Props) {
   const t = dict(lang)
+  const [view, setView] = useState<'likely' | 'all'>(() => { try { return localStorage.getItem(VIEW_KEY) === 'all' ? 'all' : 'likely' } catch { return 'likely' } })
+  const shownKinds: ScenarioKind[] = view === 'all' ? KINDS : ['average']
+  const pickView = (v: 'likely' | 'all') => { setView(v); try { localStorage.setItem(VIEW_KEY, v) } catch { /* stockage indisponible */ } }
   const name = (s: Slot) => label('species', state.teams[s.side][s.index].species, lang)
   const sideColor = (s: Slot) => (s.side === 'left' ? 'text-accent' : 'text-sky-400')
 
@@ -29,10 +35,15 @@ export default function TurnPanel({ state, turn, lang }: Props) {
 
   return (
     <section className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{t.turnTitle}</h2>
-        <span className="text-[11px] text-muted">{t.turnHint}</span>
+        <div className="flex overflow-hidden rounded border border-border text-[11px]">
+          {(['likely', 'all'] as const).map((v) => (
+            <button key={v} type="button" onClick={() => pickView(v)} className={'px-2 py-0.5 ' + (view === v ? 'bg-accent text-white' : 'text-muted hover:text-text')}>{v === 'likely' ? t.viewLikely : t.viewAll}</button>
+          ))}
+        </div>
       </div>
+      <span className="-mt-2 text-[11px] text-muted">{view === 'all' ? t.turnHint : t.likelyHint}</span>
 
       {/* Ordre des actions */}
       <ol className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -61,7 +72,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
           <thead>
             <tr className="text-[11px] uppercase text-muted">
               <th className="w-24 text-left font-medium py-1">{t.action}</th>
-              {KINDS.map((k) => <th key={k} className="text-left font-medium py-1 px-1.5">{t.scenario[k]}</th>)}
+              {shownKinds.map((k) => <th key={k} className="text-left font-medium py-1 px-1.5">{view === 'all' ? t.scenario[k] : t.viewLikely}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -71,7 +82,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                   <div className={'font-semibold ' + sideColor(a.actor)}>{i + 1}. {name(a.actor)}</div>
                   <div className="text-muted">{a.switchIn ? t.switchInAction : a.move ? label('moves', a.move, lang) : '·'}{a.spread ? ` · ${t.spreadShort}` : ''}</div>
                 </td>
-                {KINDS.map((k) => {
+                {shownKinds.map((k) => {
                   const sa = turn.scenarios[k].actions.find((x) => slotKey(x.action.actor) === slotKey(a.actor))!
                   return (
                     <td key={k} className="py-1.5 px-1.5">
@@ -90,7 +101,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                           })}
                         </div>
                       )}
-                      {sa.hits.map((h) => <HitLine key={slotKey(h.target)} hit={h} name={name(h.target)} lang={lang} />)}
+                      {sa.hits.map((h) => <HitLine key={slotKey(h.target)} hit={h} name={name(h.target)} lang={lang} rich={view === 'likely'} />)}
                       {sa.self && sa.self.length > 0 && (
                         <div className="flex flex-wrap gap-x-2 text-[11px]">
                           {sa.self.map((c, j) => <span key={j} className={c.delta > 0 ? 'text-emerald-300' : 'text-orange-300'}>{name(a.actor)} {c.delta > 0 ? '+' : ''}{c.delta} PV ({t.selfReason[c.reason]})</span>)}
@@ -101,10 +112,10 @@ export default function TurnPanel({ state, turn, lang }: Props) {
                 })}
               </tr>
             ))}
-            {KINDS.some((k) => turn.scenarios[k].endOfTurn.length > 0) && (
+            {shownKinds.some((k) => turn.scenarios[k].endOfTurn.length > 0) && (
               <tr className="border-t border-border/60 align-top">
                 <td className="py-1.5 pr-1.5 font-semibold text-muted">{t.endOfTurnEffects}</td>
-                {KINDS.map((k) => (
+                {shownKinds.map((k) => (
                   <td key={k} className="py-1.5 px-1.5 text-[11px]">
                     {turn.scenarios[k].endOfTurn.map((e, j) => (
                       <div key={j} className="flex gap-1">
@@ -119,7 +130,7 @@ export default function TurnPanel({ state, turn, lang }: Props) {
             )}
             <tr className="border-t border-border">
               <td className="py-2 pr-2 font-semibold uppercase text-[11px] text-muted">{t.endOfTurn}</td>
-              {KINDS.map((k) => <td key={k} className="py-2 px-2"><EndState scenario={turn.scenarios[k]} state={state} lang={lang} /></td>)}
+              {shownKinds.map((k) => <td key={k} className="py-2 px-2"><EndState scenario={turn.scenarios[k]} state={state} lang={lang} /></td>)}
             </tr>
           </tbody>
         </table>
@@ -128,10 +139,13 @@ export default function TurnPanel({ state, turn, lang }: Props) {
   )
 }
 
-function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
+function HitLine({ hit, name, lang, rich }: { hit: Hit; name: string; lang: Lang; rich?: boolean }) {
   const t = dict(lang)
   const pct = Math.round((hit.damage / hit.maxHP) * 1000) / 10
   const afterPct = Math.round((hit.hpAfter / hit.maxHP) * 100)
+  const p1 = (v: number) => Math.round(v * 1000) / 10
+  const d = hit.detail
+  const c = hit.chances
   return (
     <div className="flex flex-wrap items-center gap-x-1.5 leading-5">
       <span className="text-muted">→ {name}</span>
@@ -147,9 +161,18 @@ function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
           {hit.flinched && <span className="text-yellow-300">💫 {t.flinchedHit}</span>}
           {hit.thawed && <span className="text-sky-300">🔥 {t.thawedHit}</span>}
           {hit.sitrus && <span className="text-emerald-300">🍐 +{hit.sitrus}</span>}
+          {rich && d && d.maxPct > d.minPct && <span className="tabular-nums text-muted">({Math.floor(d.minPct * 10) / 10} {t.toShort} {Math.floor(d.maxPct * 10) / 10} %)</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>
           {hit.ko && <span className="font-bold text-accent">KO</span>}
         </>
+      )}
+      {rich && c && !hit.blocked && (
+        <span className="flex flex-wrap gap-x-1.5 text-[10px]">
+          {c.miss > 0 && <span className="text-orange-300">{p1(c.miss)} % {t.missed}</span>}
+          {c.crit > 0 && <span className="text-amber-300">{p1(c.crit)} % {t.critShort}</span>}
+          {c.flinch > 0 && <span className="text-yellow-300">{p1(c.flinch)} % {t.flinchLabel}</span>}
+          {c.status && c.status.chance > 0 && c.status.chance < 1 && <span className="text-violet-300">{p1(c.status.chance)} % {t.inflictLabel[c.status.status]}</span>}
+        </span>
       )}
       {hit.detail && !hit.blocked && hit.detail.koTrue[0] > 0 && hit.detail.koTrue[0] < 1 && (
         <span className="text-[10px] text-muted">{t.koChanceShort} {Math.round(hit.detail.koTrue[0] * 100)}%</span>

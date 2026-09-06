@@ -26,6 +26,7 @@ interface Props {
   value: PokemonState
   onChange: (p: PokemonState) => void
   seeder?: Seeder
+  onSaveSet?: (p: PokemonState, name: string) => void
   onClear?: () => void
   /** Espèces de la même équipe (pour les suggestions de coéquipiers) */
   teamSpecies?: string[]
@@ -38,7 +39,8 @@ const NATURE_KEYS = Object.keys(NAMES.natures)
 const STATUSES: StatusKey[] = ['', 'brn', 'par', 'psn', 'tox', 'slp', 'frz']
 const STAGES = [6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6]
 
-export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang, seeder }: Props) {
+export default function PokemonPanel({ title, role, value, onChange, onClear, teamSpecies = [], targetOptions, lang, seeder, onSaveSet }: Props) {
+  const [saveName, setSaveName] = useState<string | null>(null)
   const t = dict(lang)
   const species = speciesInfo(value.species)
   const stats = useMemo(() => finalStats(value), [value])
@@ -105,8 +107,8 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
           )}
           <div className="flex gap-1">
             {species.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} />)}
-            {value.teraType && <span className="text-xs text-muted self-center">→</span>}
-            {value.teraType && <TypeBadge type={value.teraType} lang={lang} tera />}
+            {value.teraType && value.teraActive && <span className="text-xs text-muted self-center">→</span>}
+            {value.teraType && value.teraActive && <TypeBadge type={value.teraType} lang={lang} tera />}
           </div>
         </div>
       </div>
@@ -120,7 +122,23 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         <button type="button" onClick={() => onChange({ ...mostPlayedSet(value.species), activeMove: 0 })} title={t.applyMostPlayed} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
           ★ {t.applyMostPlayed}
         </button>
+        {onSaveSet && (
+          <button type="button" onClick={() => setSaveName(`${label('species', value.species, lang)}${value.item ? ' ' + label('items', value.item, lang) : ''}`)} title={t.libSaveSet} className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-xs text-muted hover:border-accent hover:text-text">
+            💾
+          </button>
+        )}
       </div>
+      {saveName !== null && onSaveSet && (
+        <form
+          className="flex items-center gap-2 text-xs"
+          onSubmit={(e) => { e.preventDefault(); onSaveSet(value, saveName.trim() || label('species', value.species, lang)); setSaveName(null) }}
+        >
+          <span className="text-muted">{t.libSetName} :</span>
+          <input autoFocus className="input !py-1" value={saveName} onChange={(e) => setSaveName(e.target.value)} />
+          <button type="submit" className="rounded border border-accent bg-accent/20 px-2 py-1 font-semibold">{t.libSaveSet}</button>
+          <button type="button" onClick={() => setSaveName(null)} className="rounded border border-border px-2 py-1 text-muted">✕</button>
+        </form>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <Field label={t.nature}>
@@ -134,10 +152,22 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
           </select>
         </Field>
         <Field label={t.tera}>
-          <select className="input" value={value.teraType} onChange={(e) => set('teraType', e.target.value)}>
+          <div className="flex gap-1">
+          <select className="input min-w-0 flex-1" value={value.teraType} onChange={(e) => set('teraType', e.target.value)}>
             <option value="">{t.teraOff}</option>
             {TYPE_NAMES.map((ty) => <option key={ty} value={ty}>{label('types', ty, lang)}</option>)}
           </select>
+          {value.teraType && (
+            <button
+              type="button"
+              onClick={() => set('teraActive', !value.teraActive)}
+              title={t.teraToggleHint}
+              className={'shrink-0 rounded-md border px-2 text-xs font-bold ' + (value.teraActive ? 'border-accent bg-accent/20 text-text' : 'border-border bg-surface-2 text-muted hover:text-text')}
+            >
+              {value.teraActive ? 'ON' : 'OFF'}
+            </button>
+          )}
+          </div>
         </Field>
         <Field label={t.item}>
           <button type="button" onClick={() => setPicker({ kind: 'item' })} className="input text-left hover:border-accent">

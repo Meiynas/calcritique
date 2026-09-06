@@ -1,7 +1,9 @@
 // Conditions de combat : météo, terrain, salles, et effets par côté (murs, pièges, Vent Arrière...).
 // Chaque condition active est rendue visuellement (couleur, icône) pour ne pas l'oublier.
+import { useState } from 'react'
 import type { CalcOptions, FieldState, Lang } from '../model'
 import { dict } from '../i18n'
+import { Hover } from './Tooltips'
 
 interface Props {
   value: FieldState
@@ -135,3 +137,62 @@ export function Toggle({ on, onClick, icon, label, color }: { on: boolean; onCli
   )
 }
 
+
+const ROOM_ICON: Record<string, string> = { trickRoom: '🔄', gravity: '⬇️', magicRoom: '🚫', wonderRoom: '🔀' }
+const ROOM_STYLE: Record<string, string> = { trickRoom: TOGGLE_COLORS.violet, gravity: TOGGLE_COLORS.slate, magicRoom: TOGGLE_COLORS.slate, wonderRoom: TOGGLE_COLORS.slate }
+
+/** Version compacte : une rangée d'icônes (météo, terrain, salles) avec infobulle, et un engrenage pour les options de calcul. */
+export function FieldStrip({ value, onChange, options, onOptions, lang }: Props) {
+  const t = dict(lang)
+  const [showOptions, setShowOptions] = useState(false)
+  const set = <K extends keyof FieldState>(k: K, v: FieldState[K]) => onChange({ ...value, [k]: v })
+  const tips = t.fieldTips as Record<string, string>
+  const icon = (key: string, on: boolean, style: string, name: string, onClick: () => void) => (
+    <Hover key={key} tip={<span><b>{name}</b><br />{tips[key]}</span>}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={on}
+        aria-label={name}
+        className={'flex h-8 w-8 items-center justify-center rounded-md border text-base transition ' + (on ? style + ' ring-1 ring-white/40' : 'border-border bg-surface-2 hover:border-muted')}
+      >
+        <span className={on ? '' : 'opacity-40 grayscale'}>{ICON[key] ?? ROOM_ICON[key]}</span>
+      </button>
+    </Hover>
+  )
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-1">
+        {(['Sun', 'Rain', 'Sand', 'Snow'] as const).map((w) => icon(w, value.weather === w, WEATHER_STYLE[w], t.weatherNames[w], () => set('weather', value.weather === w ? '' : w)))}
+        <span className="mx-1 h-6 w-px bg-border" />
+        {(['Electric', 'Grassy', 'Psychic', 'Misty'] as const).map((tr) => icon(tr, value.terrain === tr, TERRAIN_STYLE[tr], t.terrainNames[tr], () => set('terrain', value.terrain === tr ? '' : tr)))}
+        <span className="mx-1 h-6 w-px bg-border" />
+        {(['trickRoom', 'gravity', 'magicRoom', 'wonderRoom'] as const).map((r) => icon(r, value[r], ROOM_STYLE[r], t[r], () => set(r, !value[r])))}
+        <span className="mx-1 h-6 w-px bg-border" />
+        <Hover tip={<span><b>{t.options}</b><br />{t.optionsHint}</span>}>
+          <button type="button" onClick={() => setShowOptions((v) => !v)} aria-pressed={showOptions} className={'flex h-8 w-8 items-center justify-center rounded-md border text-base ' + (showOptions ? 'border-accent bg-accent/20' : 'border-border bg-surface-2 hover:border-muted')}>⚙️</button>
+        </Hover>
+      </div>
+      {showOptions && (
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={options.useAccuracy} onChange={(e) => onOptions({ ...options, useAccuracy: e.target.checked })} className="accent-accent" />
+            {t.useAccuracy}
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-muted">{t.crit}</span>
+            <select className="input !w-auto" value={options.critMode} onChange={(e) => onOptions({ ...options, critMode: e.target.value as CalcOptions['critMode'] })}>
+              {(['chance', 'never', 'always'] as const).map((c) => <option key={c} value={c}>{t.critNames[c]}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-muted">{t.maxTurns}</span>
+            <select className="input !w-auto" value={options.maxTurns} onChange={(e) => onOptions({ ...options, maxTurns: Number(e.target.value) })}>
+              {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+    </div>
+  )
+}

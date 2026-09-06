@@ -32,9 +32,10 @@ interface Props {
   targetOptions?: { value: number | 'ally'; label: string; pos: string }[]
   foeTeam: PokemonState[]
   onChangeFoeTeam: (team: PokemonState[]) => void
+  onSaveSet?: (p: PokemonState, name: string) => void
 }
 
-export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam }: Props) {
+export default function TeamColumn({ side, team, selected, active, maxActive, onSelect, onSetActive, onChangeTeam, sideState, onChangeSide, field, lang, targetOptions, foeTeam, onChangeFoeTeam, onSaveSet }: Props) {
   const t = dict(lang)
   const [pickSlot, setPickSlot] = useState<number | null>(null)
   const [toast, setToast] = useState<{ slot: number; lines: string[] } | null>(null)
@@ -167,6 +168,7 @@ export default function TeamColumn({ side, team, selected, active, maxActive, on
           targetOptions={targetOptions}
           onChange={(p) => setMon(selected, p)}
           seeder={seederFor(selected)}
+          onSaveSet={onSaveSet}
           onClear={() => setMon(selected, emptyPokemon())}
           teamSpecies={team.map((p) => p.species)}
           lang={lang}
@@ -248,7 +250,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
         </button>
       </div>
       <div className="flex items-center justify-between gap-1 text-[11px] text-muted">
-        <span className="min-w-0 truncate">{mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}` : ''}</span>
+        <span className="min-w-0 truncate">{mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}${mon.teraActive ? '' : ' (off)'}` : ''}</span>
         <span className="flex shrink-0 items-center gap-0.5">{sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
       </div>
       <div className="mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>

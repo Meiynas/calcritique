@@ -43,7 +43,7 @@ export function buildPokemon(p: PokemonState): Pokemon {
     evs,
     item: p.item || undefined,
     ability: p.ability || undefined,
-    teraType: (p.teraType || undefined) as never,
+    teraType: ((p.teraActive !== false && p.teraType) || undefined) as never,
     boosts: p.boosts,
     status: p.status,
   })

@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { APP_VERSION, checkForUpdate, isDesktop, type UpdateStatus } from './updater'
-import { activeCount, defaultState, loadState, otherSide, saveState, setActiveSlot, type AppState, type BattleMode, type SideKey } from './model'
+import { activeCount, defaultState, loadState, otherSide, saveState, setActiveSlot, type AppState, type BattleMode, type PokemonState, type SideKey } from './model'
 import { dict } from './i18n'
 import { computeMove } from './lib/engine'
 import { mostPlayedSet } from './lib/usage'
 import { simulateTurn } from './lib/turn'
 import { switchIn } from './lib/switch'
+import { cleanSet, loadLibrary, newId, saveLibrary, type Library } from './lib/library'
+import LibraryModal from './components/LibraryModal'
+import SpeedTiersModal from './components/SpeedTiersModal'
 import { flinchChance, cantActChance } from './lib/status'
 import { label } from './lib/names'
 import TeamColumn from './components/TeamColumn'
-import FieldPanel from './components/FieldPanel'
+import { FieldStrip } from './components/FieldPanel'
 import Results from './components/Results'
 import TurnPanel from './components/TurnPanel'
 import FxLayer from './components/FxLayer'
@@ -33,6 +36,13 @@ export default function App() {
   }, [state.lang])
 
   const turn = useMemo(() => simulateTurn(state), [state])
+
+  // Bibliothèque de sets et d'équipes (stockage local + export / import)
+  const [library, setLibrary] = useState<Library>(() => loadLibrary())
+  const [showLibrary, setShowLibrary] = useState(false)
+  const [showSpeed, setShowSpeed] = useState(false)
+  const updateLibrary = (lib: Library) => { setLibrary(lib); saveLibrary(lib) }
+  const saveSet = (p: PokemonState, name: string) => updateLibrary({ ...library, sets: [{ id: newId(), name, pokemon: cleanSet(p), createdAt: Date.now() }, ...library.sets] })
 
   // Détail par attaque : chaque Pokémon en jeu contre chacune de ses cibles (PV réels)
   const details = useMemo(
@@ -87,6 +97,7 @@ export default function App() {
         active={state.active[side]}
         maxActive={activeCount(state.mode)}
         onSelect={(i) => setState((s) => ({ ...s, selected: { ...s.selected, [side]: i } }))}
+        onSaveSet={saveSet}
         foeTeam={state.teams[foe]}
         onChangeFoeTeam={(team) => setState((s) => ({ ...s, teams: { ...s.teams, [foe]: team } }))}
         onSetActive={(pos, i) =>
@@ -135,6 +146,8 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted">
             <UpdateBadge status={update} lang={state.lang} />
+            <button type="button" onClick={() => setShowSpeed(true)} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
+            <button type="button" onClick={() => setShowLibrary(true)} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
             <button type="button" onClick={reset} className="rounded border border-border px-2 py-1 hover:text-text">{t.reset}</button>
             <div className="flex overflow-hidden rounded border border-border">
               {(['fr', 'en'] as const).map((l) => (
@@ -159,24 +172,27 @@ export default function App() {
 
           {/* Colonne centrale : format, déroulé du tour, détail par attaque, conditions globales */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm" title={t.modeTitle}>
-              <span className="text-xs text-muted">{t.modeTitle}</span>
-              <label className="ml-2 flex items-center gap-1 text-xs text-muted" title={t.hazardModeHint}>
-                <input type="checkbox" checked={state.hazardMode} onChange={(e) => setState((s) => ({ ...s, hazardMode: e.target.checked }))} />
-                {t.hazardMode}
-              </label>
-              <div className="flex overflow-hidden rounded border border-border">
-                {(['1v1', '2v2'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setMode(m)}
-                    className={'px-3 py-1 font-semibold ' + (state.mode === m ? 'bg-accent text-white' : 'text-muted hover:text-text')}
-                  >
-                    {m === '1v1' ? t.mode1v1 : t.mode2v2}
-                  </button>
-                ))}
+            <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-center gap-2" title={t.modeTitle}>
+                <span className="text-xs text-muted">{t.modeTitle}</span>
+                <div className="flex overflow-hidden rounded border border-border">
+                  {(['1v1', '2v2'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={'px-3 py-1 font-semibold ' + (state.mode === m ? 'bg-accent text-white' : 'text-muted hover:text-text')}
+                    >
+                      {m === '1v1' ? t.mode1v1 : t.mode2v2}
+                    </button>
+                  ))}
+                </div>
+                <label className="ml-2 flex items-center gap-1 text-xs text-muted" title={t.hazardModeHint}>
+                  <input type="checkbox" checked={state.hazardMode} onChange={(e) => setState((s) => ({ ...s, hazardMode: e.target.checked }))} />
+                  {t.hazardMode}
+                </label>
               </div>
+              <FieldStrip value={state.field} onChange={(f) => setState((s) => ({ ...s, field: f }))} options={state.options} onOptions={(o) => setState((s) => ({ ...s, options: o }))} lang={state.lang} />
             </div>
 
             <TurnPanel state={state} turn={turn} lang={state.lang} />
@@ -199,12 +215,24 @@ export default function App() {
               </section>
             )}
 
-            <FieldPanel value={state.field} onChange={(f) => setState((s) => ({ ...s, field: f }))} options={state.options} onOptions={(o) => setState((s) => ({ ...s, options: o }))} lang={state.lang} />
           </div>
 
           {column('right')}
         </div>
       </main>
+
+      {showSpeed && <SpeedTiersModal state={state} lang={state.lang} onClose={() => setShowSpeed(false)} />}
+      {showLibrary && (
+        <LibraryModal
+          library={library}
+          onChange={updateLibrary}
+          teams={state.teams}
+          lang={state.lang}
+          onClose={() => setShowLibrary(false)}
+          onLoadSet={(side, p) => setState((s) => { const team = [...s.teams[side]]; team[s.selected[side]] = { ...p, activeMove: 0 }; return { ...s, teams: { ...s.teams, [side]: team } } })}
+          onLoadTeam={(side, team) => setState((s) => ({ ...s, teams: { ...s.teams, [side]: team.map((p) => ({ ...p, activeMove: 0 })) } }))}
+        />
+      )}
 
       <footer className="border-t border-border text-[11px] text-muted relative z-10">
         <div className="mx-auto max-w-[1800px] px-4 py-3">{t.footer}</div>

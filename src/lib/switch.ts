@@ -17,7 +17,7 @@ export interface SwitchResult {
 function types(p: PokemonState): string[] {
   const info = speciesInfo(p.species)
   if (!info) return []
-  return p.teraType ? [p.teraType] : (info.types as string[])
+  return p.teraType && p.teraActive !== false ? [p.teraType] : (info.types as string[])
 }
 
 export function isGrounded(p: PokemonState, field: FieldState): boolean {

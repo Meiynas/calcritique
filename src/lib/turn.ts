@@ -61,6 +61,8 @@ export interface Hit {
   thawed?: boolean
   /** Baie Sitrus de la cible consommée après la frappe : PV rendus */
   sitrus?: number
+  /** Aléas de cette frappe (0..1) : raté, critique, apeurer la cible (si elle joue après), statut infligé */
+  chances?: { miss: number; crit: number; flinch: number; status?: { status: InflictedStatus; chance: number } }
   detail: MoveResult | null
 }
 
@@ -330,7 +332,14 @@ export function simulateTurn(state: AppState): TurnResult {
           const battle = { gameType, targetCount: alive.length }
           const normal = computeMove(action.move, attackerState, defender, f, { ...state.options, critMode: 'chance' }, side, battle)
           if (!normal) continue
-          const base = { target, hpBefore: cur.hp, maxHP: cur.maxHP, redirected, helpingHand: hh, detail: normal }
+          const pendingTarget = remaining.some((r) => slotKey(r.actor) === tk) && target.side !== side
+          const chances = {
+            miss: normal.accuracy.base === null ? 0 : 1 - normal.accuracy.effective / 100,
+            crit: normal.critChance,
+            flinch: pendingTarget ? flinchChance(action.move, mons[ak], mons[tk]) : 0,
+            status: statusChance(action.move, mons[ak], mons[tk], field) ?? undefined,
+          }
+          const base = { target, hpBefore: cur.hp, maxHP: cur.maxHP, redirected, helpingHand: hh, detail: normal, chances }
           // Garde Large / Anti-Air du côté de la cible
           if (target.side !== side && guard[target.side].wide && isSpreadTarget(info?.target)) {
             hits.push({ ...base, damage: 0, hpAfter: cur.hp, ko: false, missed: false, crit: false, blocked: true, blockedBy: 'wideGuard' })

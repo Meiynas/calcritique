@@ -44,7 +44,7 @@ function describe(p: PokemonState, lang: Lang, offensive: boolean, category: str
     parts.push(`${sp[stat]} ${dict(lang).statNames[stat]}`)
   }
   if (p.item) parts.push(label('items', p.item, lang))
-  if (p.teraType) parts.push(`Tera ${label('types', p.teraType, lang)}`)
+  if (p.teraType && p.teraActive) parts.push(`Tera ${label('types', p.teraType, lang)}`)
   return `${label('species', p.species, lang)} (${label('natures', p.nature, lang)}, ${parts.join(', ')})`
 }
 

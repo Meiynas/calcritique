@@ -17,7 +17,8 @@ export interface PokemonState {
   sp: Record<StatKey, number> // Points de Stat, 0 à 32 chacun, 66 max au total
   item: string
   ability: string
-  teraType: string // '' = pas de Téracristal actif
+  teraType: string // type Téracristal choisi ('' = aucun)
+  teraActive: boolean // interrupteur : la Téracristallisation est-elle faite ?
   moves: string[] // 4 noms d'attaques (anglais), '' si vide
   boosts: Record<StatKey, number> // -6 à +6 (hp ignoré)
   status: StatusKey
@@ -98,6 +99,7 @@ export function defaultPokemon(species: string, overrides: Partial<PokemonState>
     item: '',
     ability: '',
     teraType: '',
+    teraActive: true,
     moves: ['', '', '', ''],
     boosts: zeroStats(),
     status: '',
