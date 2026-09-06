@@ -6,18 +6,13 @@ import { dict } from '../i18n'
 import { label } from '../lib/names'
 import { computeMove, damageRange, moveInfo, speciesInfo, type MoveResult } from '../lib/engine'
 import { learnset } from '../lib/usage'
+import { TWO_TURN_MOVES } from '../lib/advice'
 import Modal from './Modal'
 import TypeBadge from './TypeBadge'
 import { SPRITES } from './Tooltips'
 
 interface Props { state: AppState; lang: Lang; onClose: () => void }
 
-/** Attaques sur 2 tours (charge ou semi-invulnérabilité) et attaques à recharge : écartées si l'option est cochée */
-const TWO_TURN_MOVES = new Set([
-  'Fly', 'Dig', 'Dive', 'Bounce', 'Phantom Force', 'Shadow Force', 'Sky Attack', 'Solar Beam', 'Solar Blade', 'Skull Bash', 'Razor Wind',
-  'Freeze Shock', 'Ice Burn', 'Geomancy', 'Meteor Beam', 'Electro Shot', 'Sky Drop', 'Hyper Beam', 'Giga Impact', 'Blast Burn', 'Hydro Cannon',
-  'Frenzy Plant', 'Rock Wrecker', 'Roar of Time', 'Prismatic Laser', 'Eternabeam', 'Focus Punch',
-])
 
 interface Cell { move: string; ohko: number; twohko: number; maxPct: number; minPct: number; r: MoveResult; inKit: boolean }
 

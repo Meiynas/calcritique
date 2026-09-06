@@ -329,6 +329,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.15.1 : analyse par attaque simplifiée (trimOffensive / trimDefensive : seulement les seuils atteignables avec des SP, plus le plus haut "déjà" et le plus bas "hors de portée", et l'inverse en défense) ; les attaques sur 2 tours et Mitra-Poing (TWO_TURN_MOVES déplacé dans advice.ts) sont écartées des "autres attaques qui OHKO".
 - 2026-09-06 : v1.15.0 : Clone (case + mécanique dans le tour, multi-coups qui traversent), Dé Pipé, Grand Nettoyage / Anti-Brume / Tour Rapide.
 - 2026-09-06 : v1.14.0 : Provoc, confusion (case Confus + attaques qui confusent), Farceur contre Ténèbres, Distorsion posée en cours de tour.
 - 2026-09-06 : v1.13.4 : fenêtre "Choisir un Pokémon" : filtre par talents requis, avec des groupes OU comme pour les attaques (talents possibles d'après PokéAPI, talent imposé pour les Méga).

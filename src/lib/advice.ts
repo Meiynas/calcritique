@@ -8,6 +8,28 @@ import { damageRange, moveInfo } from './engine'
 import { learnset } from './usage'
 
 export const THRESHOLDS = [25, 33.4, 50, 100] as const
+
+/** Attaques sur 2 tours (charge, semi-invulnérabilité, recharge) et Mitra-Poing : écartées des suggestions. */
+export const TWO_TURN_MOVES = new Set([
+  'Fly', 'Dig', 'Dive', 'Bounce', 'Phantom Force', 'Shadow Force', 'Sky Attack', 'Solar Beam', 'Solar Blade', 'Skull Bash', 'Razor Wind',
+  'Freeze Shock', 'Ice Burn', 'Geomancy', 'Meteor Beam', 'Electro Shot', 'Sky Drop', 'Hyper Beam', 'Giga Impact', 'Blast Burn', 'Hydro Cannon',
+  'Frenzy Plant', 'Rock Wrecker', 'Roar of Time', 'Prismatic Laser', 'Eternabeam', 'Focus Punch',
+])
+
+/** Ne garde que les lignes utiles : les seuils atteignables avec des SP, plus le plus haut "déjà" et le plus bas "hors de portée". */
+export function trimOffensive<T extends { already: boolean; add: number | null }>(list: T[]): T[] {
+  const already = list.filter((a) => a.already)
+  const reachable = list.filter((a) => !a.already && a.add !== null)
+  const out = list.filter((a) => !a.already && a.add === null)
+  return [...(already.length ? [already[already.length - 1]] : []), ...reachable, ...(out.length ? [out[0]] : [])]
+}
+/** Côté défensif : "déjà sous 25 %" implique déjà sous les autres, "hors de portée pour passer sous 100 %" implique les autres. */
+export function trimDefensive<T extends { already: boolean; add: number | null; hpAdd: number | null }>(list: T[]): T[] {
+  const already = list.filter((a) => a.already)
+  const reachable = list.filter((a) => !a.already && (a.add !== null || a.hpAdd !== null))
+  const out = list.filter((a) => !a.already && a.add === null && a.hpAdd === null)
+  return [...(already.length ? [already[0]] : []), ...reachable, ...(out.length ? [out[out.length - 1]] : [])]
+}
 export type Threshold = (typeof THRESHOLDS)[number]
 
 export interface SpAdvice {
@@ -101,6 +123,7 @@ export function guaranteedOHKOMoves(atk: PokemonState, def: PokemonState, field:
     if (m === exclude) continue
     const info = moveInfo(m)
     if (!info || info.category === 'Status') continue // puissance variable (Balayage...) = 0 dans les données, on garde
+    if (TWO_TURN_MOVES.has(m)) continue
     // Attaques inutilisables telles quelles (charge, contrecoup KO, dégâts fixes...) : on garde, l'utilisateur juge
     const r = damageRange(m, atk, def, field, side, battle)
     if (!r || r.min < r.curHP) continue

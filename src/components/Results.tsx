@@ -1,7 +1,7 @@
 // Résultats : une carte par attaque, avec dégâts, précision et le vrai taux de KO.
 import type { FieldState, Lang, PokemonState, SideKey } from '../model'
 import { useMemo, useState } from 'react'
-import { defensiveAdvice, guaranteedOHKOMoves, offensiveAdvice } from '../lib/advice'
+import { defensiveAdvice, guaranteedOHKOMoves, offensiveAdvice, trimDefensive, trimOffensive } from '../lib/advice'
 import { dict } from '../i18n'
 import { cantActChance, statusChance } from '../lib/status'
 import { defaultField } from '../model'
@@ -220,8 +220,8 @@ function AdvicePanel({ r, attacker, defender, field, side, battle, lang }: { r: 
   const advice = useMemo(() => {
     if (!open) return null
     return {
-      off: offensiveAdvice(r.move, attacker, defender, field, side, battle),
-      def: defensiveAdvice(r.move, attacker, defender, field, side, battle),
+      off: trimOffensive(offensiveAdvice(r.move, attacker, defender, field, side, battle)),
+      def: trimDefensive(defensiveAdvice(r.move, attacker, defender, field, side, battle)),
       ohko: r.min < r.curHP ? guaranteedOHKOMoves(attacker, defender, field, side, battle, r.move) : [],
     }
   }, [open, r, attacker, defender, field, side, battle])
