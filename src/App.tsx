@@ -156,7 +156,7 @@ export default function App() {
                         <span className={d.actor.side === 'left' ? 'text-accent' : 'text-sky-400'}>{label('species', d.attacker.species, state.lang)}</span> {t.vs}{' '}
                         <span className={d.target.side === 'left' ? 'text-accent' : 'text-sky-400'}>{label('species', d.defender.species, state.lang)}</span>
                       </div>
-                      <Results results={[d.result]} attacker={d.attacker} defender={d.defender} lang={state.lang} activeMove={0} compact />
+                      <Results results={[d.result]} attacker={d.attacker} defender={d.defender} field={state.field} lang={state.lang} activeMove={0} compact />
                     </div>
                   ) : null,
                 )}

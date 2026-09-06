@@ -113,7 +113,7 @@ function HitLine({ hit, name, lang }: { hit: Hit; name: string; lang: Lang }) {
           <span className={'font-semibold tabular-nums ' + (hit.ko ? 'text-accent' : '')}>−{pct}%</span>
           {hit.crit && <span className="text-amber-300">{t.critShort}</span>}
           {hit.helpingHand && <span className="text-amber-200">🤝</span>}
-          {hit.paralyzed && <span className="text-yellow-300">⚡ {t.paralyzedHit}</span>}
+          {hit.inflicted && <span className="text-yellow-300">{hit.inflicted === 'par' ? '⚡' : hit.inflicted === 'slp' ? '💤' : '🔥'} {t.statusNames[hit.inflicted]}</span>}
           {hit.flinched && <span className="text-yellow-300">💫 {t.flinchedHit}</span>}
           {hit.thawed && <span className="text-sky-300">🔥 {t.thawedHit}</span>}
           <span className="tabular-nums text-muted">({hit.hpAfter}/{hit.maxHP} · {afterPct}%)</span>

@@ -1,7 +1,8 @@
 // Résultats : une carte par attaque, avec dégâts, précision et le vrai taux de KO.
-import type { Lang, PokemonState } from '../model'
+import type { FieldState, Lang, PokemonState } from '../model'
 import { dict } from '../i18n'
-import { cantActChance, flinchChance } from '../lib/status'
+import { cantActChance, flinchChance, statusChance } from '../lib/status'
+import { defaultField } from '../model'
 import { label } from '../lib/names'
 import type { MoveResult } from '../lib/engine'
 import TypeBadge from './TypeBadge'
@@ -13,6 +14,7 @@ interface Props {
   lang: Lang
   activeMove: number
   compact?: boolean
+  field?: FieldState
 }
 
 function pct(p: number): string {
@@ -44,7 +46,7 @@ function describe(p: PokemonState, lang: Lang, offensive: boolean, category: str
   return `${label('species', p.species, lang)} (${label('natures', p.nature, lang)}, ${parts.join(', ')})`
 }
 
-export default function Results({ results, attacker, defender, lang, activeMove, compact }: Props) {
+export default function Results({ results, attacker, defender, lang, activeMove, compact, field }: Props) {
   const t = dict(lang)
   const indexed = results.map((r, i) => ({ r, i })).filter((x): x is { r: MoveResult; i: number } => !!x.r && x.r.category !== 'Status')
   const shown = [...indexed.filter((x) => x.i === activeMove), ...indexed.filter((x) => x.i !== activeMove)]
@@ -107,7 +109,7 @@ export default function Results({ results, attacker, defender, lang, activeMove,
             </tbody>
           </table>
 
-          {r.max > 0 && <DamageGauge r={r} attacker={attacker} defender={defender} lang={lang} />}
+          {r.max > 0 && <DamageGauge r={r} attacker={attacker} defender={defender} field={field} lang={lang} />}
           <p className="mt-2 text-[11px]">
             <span className={effClass(r.effectiveness)}>{effLabel(r.effectiveness, lang)}</span>
             <span className="ml-2 text-muted">{describe(attacker, lang, true, r.category)} → {describe(defender, lang, false, r.category)}</span>
@@ -139,7 +141,7 @@ function effClass(m: number): string {
 
 /** Double jauge : (1) dégâts en % des PV max avec bande normale et bande critique, repères 25 / 33,4 / 50 / 100 ;
     (2) chances : raté / touche / critique. */
-function DamageGauge({ r, attacker, defender, lang }: { r: MoveResult; attacker: PokemonState; defender: PokemonState; lang: Lang }) {
+function DamageGauge({ r, attacker, defender, field, lang }: { r: MoveResult; attacker: PokemonState; defender: PokemonState; field?: FieldState; lang: Lang }) {
   const t = dict(lang)
   const pct = (v: number) => Math.min(100, (v / r.maxHP) * 100)
   const nMin = pct(r.min), nMax = pct(r.max), cMin = pct(r.critMin), cMax = pct(r.critMax)
@@ -151,7 +153,9 @@ function DamageGauge({ r, attacker, defender, lang }: { r: MoveResult; attacker:
   const missP = actP - hit
   const flinchC = flinchChance(r.move, attacker, defender)
   const flinchP = hit * flinchC
-  const normalP = Math.max(0, hit - critP - flinchP)
+  const sc = statusChance(r.move, attacker, defender, field ?? defaultField())
+  const statusP = sc ? hit * sc.chance : 0
+  const normalP = Math.max(0, hit - critP - flinchP - statusP)
   const p1 = (v: number) => Math.round(v * 1000) / 10
   const curPct = pct(r.curHP)
   return (
@@ -182,14 +186,16 @@ function DamageGauge({ r, attacker, defender, lang }: { r: MoveResult; attacker:
           {ca.chance > 0 && ca.reason && <div className="bg-slate-400/60" style={{ width: `${ca.chance * 100}%` }} title={`${t.cantAct[ca.reason]} ${p1(ca.chance)}%`} />}
           {missP > 0 && <div className="bg-orange-400/70" style={{ width: `${missP * 100}%` }} title={`${t.missed} ${p1(missP)}%`} />}
           <div className="bg-emerald-400/70" style={{ width: `${normalP * 100}%` }} title={`${t.hitLabel} ${p1(normalP)}%`} />
+          {statusP > 0 && sc && <div className="bg-violet-400/80" style={{ width: `${statusP * 100}%` }} title={`${t.inflictLabel[sc.status]} ${p1(statusP)}%`} />}
           {flinchP > 0 && <div className="bg-yellow-300/80" style={{ width: `${flinchP * 100}%` }} title={`${t.flinchLabel} ${p1(flinchP)}%`} />}
           {critP > 0 && <div className="bg-amber-400/80" style={{ width: `${critP * 100}%` }} title={`${t.critShort} ${p1(critP)}%`} />}
         </div>
         <span className="max-w-[45%] shrink-0 text-right tabular-nums">
-          {ca.reason && ca.chance > 0 && <span className="text-slate-300">{p1(ca.chance)}% {t.cantAct[ca.reason]} · </span>}
+          {ca.reason && ca.chance > 0 && <span className="text-slate-300">{t.attackerSelf} {p1(ca.chance)}% {t.cantAct[ca.reason]} · </span>}
           {ca.reason === 'slp' && <span className="text-slate-300">{p1(1 - ca.chance)}% {t.wakes} · </span>}
           {ca.reason === 'frz' && <span className="text-sky-300">{p1(1 - ca.chance)}% {t.thaws} · </span>}
           {missP > 0 && <span className="text-orange-300">{p1(missP)}% {t.missed} · </span>}
+          {statusP > 0 && sc && <span className="text-violet-300">{p1(statusP)}% {t.inflictLabel[sc.status]} · </span>}
           {flinchP > 0 && <span className="text-yellow-300">{p1(flinchP)}% {t.flinchLabel} · </span>}
           <span className="text-amber-300">{p1(critP)}% {t.critShort}</span>
         </span>

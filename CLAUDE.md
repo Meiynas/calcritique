@@ -220,6 +220,14 @@ Ajouté en v1.6.0 (retours du 6 septembre 2026, statuts et flinch) :
 - Vue Attaques (A et B) : menu de statut (Sain, Brûlure, Paralysie, Poison, Sommeil, Gel) sous les cibles.
 - 14 tests automatiques (flinch, gel avec Boutefeu).
 
+Ajouté en v1.6.1 (retours du 6 septembre 2026, statuts Champions) :
+- Vocabulaire : "flinch" se dit "apeuré" en français (la cible est apeurée, l'attaque "apeure la cible").
+- Taux propres à Champions (source Serebii, page "Status Condition Changes") : paralysie totale 12,5 % (au lieu de 25 %), dégel 25 % à chaque tentative d'attaque et dégel garanti au 3e tour, sommeil : réveil 33,3 % au 2e tour puis 100 % au 3e (le compteur étant inconnu, l'outil retient 33,3 % de réveil).
+- Jauge "Chances" : tout est pondéré en chaîne : d'abord le statut du lanceur (ex. 75 % reste gelé), puis la précision, puis les effets sur la cible. Exemple : lanceur gelé, Éboulement 90 % : 75 % reste gelé, 2,5 % raté, 6,75 % apeure la cible, le reste touche / critique. Le texte précise "lanceur" pour le statut du lanceur et "apeure la cible" / "paralyse la cible" pour les effets sur l'adversaire.
+- Table des attaques qui infligent un statut (src/lib/status.ts, STATUS_MOVES) : paralysie (Plaquage 30 %, Fatal-Foudre 30 %, Tonnerre 10 %, Cage Éclair / Nuzzle 100 %...), sommeil (Spore, Poudre Dodo, Hypnose...), brûlure (Feu Follet, Ébullition 30 %, Lance-Flammes 10 %...). Sérénité double les effets secondaires ; Écran Poudre, Cape Cachée, Sans Limite (lanceur) les annulent ; immunités de type et de talent (Électrik, Sol contre Cage Éclair, Plante contre les poudres, Échauffement, Insomnia, Feu contre la brûlure, Terrain Brumeux / Électrique au sol...). Pour les attaques de statut, la chance est leur précision (Cage Éclair 90 %, Hypnose 60 %).
+- Déroulé du tour : un statut infligé avant que la cible agisse change l'ordre (paralysie = Vitesse / 2) et peut la bloquer (paralysie totale, sommeil). Règle des scénarios : meilleur = nos effets à chance partielle réussissent (Plaquage 30 % paralyse, puis paralysie totale) ; moyen = seuls les effets à 50 % ou plus sont retenus ; pire = seuls les effets garantis passent, et ceux de l'adversaire réussissent.
+- Un segment violet dans la jauge "Chances" montre la chance d'infliger le statut ; un segment jaune celle d'apeurer.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -235,6 +243,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.6.1 : taux Champions (para 12,5 %, dégel 25 %), "apeuré", jauge des chances pondérée en chaîne, attaques à effet de statut (Plaquage, Ébullition, Spore...) dans le tour et la jauge.
 - 2026-09-06 : v1.6.0 : flinch, statuts qui empêchent d'agir (para / sommeil / gel) dans le tour et dans la jauge des chances, lignes du tableau dans l'ordre réel, statut modifiable dans la vue Attaques.
 - 2026-09-06 : v1.5.0 : colonne Nat. à gauche et nature neutre, double jauge dégâts / chances avec seuils et efficacité, vue "Attaques (A et B)" en 2v2, paralysie en cours de tour, Zone Magique corrigée.
 - 2026-09-06 : v1.4.0 : nature par + / −, positions A / B, cibles en puces, x0,75 selon le nombre de cibles, murs Singles / Doubles, attaques de soutien VGC dans le déroulé avec vitesse dynamique.

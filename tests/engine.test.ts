@@ -151,7 +151,8 @@ test('tour : Garde Large bloque Séisme, Coup d\'Main renforce l\'allié, Vent G
 })
 
 test('tour : Cage Éclair paralyse et divise la Vitesse pour la suite du tour ; sans effet sur un type Sol', async () => {
-  const { simulateTurn, canParalyze } = await import('../src/lib/turn')
+  const { simulateTurn } = await import('../src/lib/turn')
+  const { canReceiveStatus, statusChance, FULL_PARALYSIS, THAW_CHANCE } = await import('../src/lib/status')
   const { defaultState } = await import('../src/model')
   const st = defaultState()
   st.mode = '2v2'
@@ -167,9 +168,29 @@ test('tour : Cage Éclair paralyse et divise la Vitesse pour la suite du tour ; 
   assert.equal(tw.effect, 'paralyze')
   const posOf = (m: string) => avg.actions.find((a) => a.action.move === m)!.position
   assert.ok(posOf('Earthquake') < posOf('Kowtow Cleave')) // Kingambit paralysé (102 -> 51) passe après Garchomp (122)
-  assert.ok(!canParalyze('Thunder Wave', defaultPokemon('Garchomp'), field))
-  assert.ok(!canParalyze('Stun Spore', defaultPokemon('Rillaboom'), field))
-  assert.ok(canParalyze('Glare', defaultPokemon('Garchomp'), field))
+  assert.ok(!canReceiveStatus('par', 'Thunder Wave', defaultPokemon('Garchomp'), field))
+  assert.ok(!canReceiveStatus('par', 'Stun Spore', defaultPokemon('Rillaboom'), field))
+  assert.ok(canReceiveStatus('par', 'Glare', defaultPokemon('Garchomp'), field))
+  // Taux Champions
+  assert.equal(FULL_PARALYSIS, 0.125)
+  assert.equal(THAW_CHANCE, 0.25)
+  // Plaquage : 30 % de paralysie, doublé par Sérénité, bloqué par Cape Cachée
+  const bs = defaultPokemon('Snorlax', { moves: ['Body Slam', '', '', ''] })
+  assert.equal(statusChance('Body Slam', bs, defaultPokemon('Garchomp'), field)!.chance, 0.3)
+  assert.equal(statusChance('Body Slam', { ...bs, ability: 'Serene Grace' }, defaultPokemon('Garchomp'), field)!.chance, 0.6)
+  assert.equal(statusChance('Body Slam', bs, defaultPokemon('Garchomp', { item: 'Covert Cloak' }), field), null)
+  assert.equal(statusChance('Body Slam', bs, defaultPokemon('Raichu'), field), null)
+  // Dans le meilleur scénario, Plaquage paralyse un adversaire plus lent et le fait passer après
+  st.teams.left[0] = defaultPokemon('Snorlax', { nature: 'Adamant', sp: { hp: 32, atk: 32, def: 0, spa: 0, spd: 0, spe: 10 }, moves: ['Body Slam', '', '', ''], target: 1 })
+  st.teams.right[1] = defaultPokemon('Toxapex', { nature: 'Bold', sp: { hp: 32, atk: 0, def: 32, spa: 0, spd: 0, spe: 0 }, moves: ['Protect', '', '', ''] })
+  st.teams.right[1].moves[0] = 'Toxic'
+  st.teams.left[1] = defaultPokemon('Garchomp', { moves: ['Protect', '', '', ''] })
+  const r3 = simulateTurn(st)
+  const bsBest = r3.scenarios.best.actions.find((a) => a.action.move === 'Body Slam')!
+  assert.equal(bsBest.hits[0].inflicted, 'par')
+  assert.equal(r3.scenarios.best.actions.find((a) => a.action.move === 'Toxic')!.skipped, 'par') // paralysie totale dans le meilleur cas
+  const bsAvg = r3.scenarios.average.actions.find((a) => a.action.move === 'Body Slam')!
+  assert.equal(bsAvg.hits[0].inflicted, undefined) // 30 % : pas retenu dans le scénario moyen
 })
 
 test('tour : Bluff fait tressaillir la cible (elle n\'agit pas), un Pokémon gelé n\'agit pas sauf avec Boutefeu', async () => {
