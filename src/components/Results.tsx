@@ -1,5 +1,7 @@
 // Résultats : une carte par attaque, avec dégâts, précision et le vrai taux de KO.
-import type { FieldState, Lang, PokemonState } from '../model'
+import type { FieldState, Lang, PokemonState, SideKey } from '../model'
+import { useMemo, useState } from 'react'
+import { defensiveAdvice, guaranteedOHKOMoves, offensiveAdvice } from '../lib/advice'
 import { dict } from '../i18n'
 import { cantActChance, statusChance } from '../lib/status'
 import { defaultField } from '../model'
@@ -17,6 +19,9 @@ interface Props {
   field?: FieldState
   /** Chance que le lanceur soit apeuré avant d'agir (attaques adverses jouées avant) */
   preFlinch?: number
+  /** Camp de l'attaquant et contexte de combat, pour les conseils de SP et d'attaques */
+  side?: SideKey
+  battle?: { gameType?: 'Singles' | 'Doubles'; targetCount?: number }
 }
 
 function pct(p: number): string {
@@ -48,7 +53,7 @@ function describe(p: PokemonState, lang: Lang, offensive: boolean, category: str
   return `${label('species', p.species, lang)} (${label('natures', p.nature, lang)}, ${parts.join(', ')})`
 }
 
-export default function Results({ results, attacker, defender, lang, activeMove, compact, field, preFlinch }: Props) {
+export default function Results({ results, attacker, defender, lang, activeMove, compact, field, preFlinch, side, battle }: Props) {
   const t = dict(lang)
   const indexed = results.map((r, i) => ({ r, i })).filter((x): x is { r: MoveResult; i: number } => !!x.r && x.r.category !== 'Status')
   const shown = [...indexed.filter((x) => x.i === activeMove), ...indexed.filter((x) => x.i !== activeMove)]
@@ -116,6 +121,7 @@ export default function Results({ results, attacker, defender, lang, activeMove,
             <span className={effClass(r.effectiveness)}>{effLabel(r.effectiveness, lang)}</span>
             <span className="ml-2 text-muted">{describe(attacker, lang, true, r.category)} → {describe(defender, lang, false, r.category)}</span>
           </p>
+          {r.max > 0 && field && side && <AdvicePanel r={r} attacker={attacker} defender={defender} field={field} side={side} battle={battle ?? {}} lang={lang} />}
         </article>
       ))}
       </div>
@@ -202,6 +208,65 @@ function DamageGauge({ r, attacker, defender, field, preFlinch, lang }: { r: Mov
         {statusP > 0 && sc && <span className="text-violet-300">{p1(statusP)} % {t.inflictLabel[sc.status]}</span>}
         {critP > 0 && <span className="text-amber-300">{p1(critP)} % {t.critShort}</span>}
       </div>
+    </div>
+  )
+}
+
+
+/** Conseils : SP pour garantir un seuil (attaquant), SP pour passer sous un seuil (défenseur), autres attaques qui OHKO à coup sûr. */
+function AdvicePanel({ r, attacker, defender, field, side, battle, lang }: { r: MoveResult; attacker: PokemonState; defender: PokemonState; field: FieldState; side: SideKey; battle: { gameType?: 'Singles' | 'Doubles'; targetCount?: number }; lang: Lang }) {
+  const t = dict(lang)
+  const [open, setOpen] = useState(false)
+  const advice = useMemo(() => {
+    if (!open) return null
+    return {
+      off: offensiveAdvice(r.move, attacker, defender, field, side, battle),
+      def: defensiveAdvice(r.move, attacker, defender, field, side, battle),
+      ohko: r.min < r.curHP ? guaranteedOHKOMoves(attacker, defender, field, side, battle, r.move) : [],
+    }
+  }, [open, r, attacker, defender, field, side, battle])
+  const thLabel = (th: number) => (th === 100 ? 'KO' : th === 33.4 ? '33,4 %' : `${th} %`)
+  const statName = (k: string) => (t.statNames as Record<string, string>)[k]
+  return (
+    <div className="mt-2 border-t border-border/60 pt-2 text-[11px]">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="text-muted hover:text-text">{open ? '▾' : '▸'} {t.adviceTitle}</button>
+      {open && advice && (
+        <div className="mt-1 flex flex-col gap-1.5">
+          <div>
+            <span className="text-muted">{t.adviceOff(label('species', attacker.species, lang), statName(advice.off[0]?.stat ?? 'atk'))} : </span>
+            {advice.off.map((a) => (
+              <span key={a.threshold} className="mr-2 whitespace-nowrap">
+                <b>{thLabel(a.threshold)}</b> →{' '}
+                {a.already ? <span className="text-emerald-300">{t.adviceAlready}</span> : a.add === null ? <span className="text-muted">{t.adviceOutOfReach}</span> : <span className={a.overBudget ? 'text-orange-300' : 'text-emerald-300'}>+{a.add} SP{a.overBudget ? ` (${t.adviceOverBudget})` : ''}</span>}
+              </span>
+            ))}
+          </div>
+          <div>
+            <span className="text-muted">{t.adviceDef(label('species', defender.species, lang), statName(advice.def[0]?.stat ?? 'def'))} : </span>
+            {advice.def.map((a) => (
+              <span key={a.threshold} className="mr-2 whitespace-nowrap">
+                <b>{thLabel(a.threshold)}</b> →{' '}
+                {a.already ? <span className="text-emerald-300">{t.adviceAlready}</span> : a.add === null && a.hpAdd === null ? <span className="text-muted">{t.adviceOutOfReach}</span> : (
+                  <span className={a.overBudget ? 'text-orange-300' : 'text-emerald-300'}>
+                    {a.add !== null ? `+${a.add} SP ${statName(a.stat)}` : ''}
+                    {a.add !== null && a.hpAdd !== null ? ` (${t.adviceOr} +${a.hpAdd} SP ${t.statNames.hp})` : a.hpAdd !== null ? `+${a.hpAdd} SP ${t.statNames.hp}` : ''}
+                    {a.overBudget ? ` (${t.adviceOverBudget})` : ''}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+          {r.min < r.curHP && (
+            <div>
+              <span className="text-muted">{t.adviceOhko} : </span>
+              {advice.ohko.length === 0 ? <span className="text-muted">{t.adviceNone}</span> : advice.ohko.slice(0, 8).map((m) => {
+                const inKit = attacker.moves.includes(m.move)
+                return <span key={m.move} className={'mr-2 whitespace-nowrap ' + (inKit ? 'text-emerald-300' : '')}>{label('moves', m.move, lang)}{inKit ? '' : ` (${t.adviceNotInKit})`} · {m.accuracy === null ? '∞' : m.accuracy + ' %'}</span>
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

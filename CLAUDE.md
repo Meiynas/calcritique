@@ -292,6 +292,12 @@ Ajouté en v1.11.0 (6 septembre 2026) :
 - Thèmes : Sombre (défaut), Clair et Pastel (blanc, bleu clair, rose), boutons ☾ ☀ 🌸 dans l'en-tête, mémorisés (calcritique.theme, attribut data-theme sur <html>). Implémentation : redéfinition des variables --color-* de Tailwind par thème dans index.css, plus des surcharges pour les classes pensées pour le fond sombre (bg-white/10 des jauges, textes emerald-300 / amber-300 / orange-300... assombris). Les effets visuels de terrain sont atténués (opacité 0,6) sur fond clair.
 - Speed tiers : les Pokémon des deux équipes apparaissent avec leur set réel ("Équipe 1 / Équipe 2 · set actuel", fond rouge ou bleu, jamais fusionnés) et les autres lignes de ces espèces ont un liseré rouge / bleu. Sur la ligne "toi" et sur les lignes "set actuel", on règle directement les SP de Vitesse (0 à 32) et le stade de Vitesse (−6 à +6) : ça modifie le Pokémon dans son équipe (prop onUpdate). Méga sans Mouchoir ; le Pokémon comparé garde ses autres variantes sauf celle identique à sa Vitesse.
 
+Ajouté en v1.12.0 (6 septembre 2026) : calcul inversé et matrice.
+- engine.damageRange : fourchette de dégâts rapide (un seul calcul, sans critique) pour les analyses en boucle (computeMove coûte ~6 ms).
+- src/lib/advice.ts : offensiveAdvice (SP à ajouter dans la stat offensive de l'attaque, Atq ou Atq Spé, pour que le roll le plus bas atteigne 25 / 33,4 / 50 / 100 %, par dichotomie, avec "déjà", "hors de portée" à 32 SP, et signalement du dépassement des 66 SP), defensiveAdvice (SP à ajouter en Déf ou Déf Spé selon l'attaque, Psyko Choc / Psycho-Frappe / Lame Ointe comptées sur la Déf, pour que le roll le plus haut passe strictement sous le seuil, avec l'alternative en SP de PV), guaranteedOHKOMoves (attaques du learnset Champions, hors kit comprises, dont le roll le plus bas met KO, triées par précision).
+- Détail par attaque : bloc repliable "Analyse : SP à ajouter et autres attaques" (calculé à l'ouverture seulement) qui affiche ces trois conseils ; les autres attaques ne sont proposées que si l'attaque courante ne met pas KO au roll le plus bas.
+- Matrice équipe contre équipe (bouton ⊞ dans l'en-tête, MatrixModal.tsx) : lignes = attaquants, colonnes = cibles, sens "Équipe 1 attaque" ou "Équipe 2 attaque". Chaque case : la meilleure attaque du kit (tri : OHKO, puis 2HKO, puis dégâts max), vrai taux de OHKO, 2HKO, fourchette de dégâts, code couleur (rouge OHKO sûr, orange OHKO possible, ambre 2HKO, vert rien). Cibles multiples comptées comme cible unique (pas de x0,75).
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -307,6 +313,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.12.0 : analyse par attaque (SP offensifs pour garantir un seuil, SP défensifs pour passer sous un seuil, autres attaques qui OHKO à coup sûr) et matrice équipe contre équipe dans les deux sens.
 - 2026-09-06 : v1.11.3 : "Les 2 équipes seulement" devient une case à cocher et n'affiche que les sets actuels des Pokémon en équipe (sans variantes).
 - 2026-09-06 : v1.11.2 : bouton "Les 2 équipes seulement" dans les speed tiers (n'affiche que les espèces des deux équipes, toutes variantes).
 - 2026-09-06 : v1.11.1 : ordre des stades de Vitesse dans les speed tiers (+6 en haut, −6 en bas, comme dans la fiche).

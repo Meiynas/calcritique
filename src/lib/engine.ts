@@ -218,6 +218,35 @@ export function critChanceFor(moveName: string, attacker: Pokemon, extraStage = 
   return [1 / 24, 1 / 8, 1 / 2, 1][Math.min(3, stage)]
 }
 
+/** Fourchette de dégâts rapide (un seul calcul, sans critique ni distribution) : pour les analyses en boucle. */
+export function damageRange(
+  moveName: string,
+  attackerState: PokemonState,
+  defenderState: PokemonState,
+  fieldState: FieldState,
+  attackerSide: SideKey = 'left',
+  battle: { gameType?: 'Singles' | 'Doubles'; targetCount?: number } = {},
+): { min: number; max: number; maxHP: number; curHP: number; accuracy: number | null } | null {
+  const info = moveName ? gen.moves.get(toID(moveName)) : undefined
+  if (!info || info.category === 'Status' || !attackerState.species || !defenderState.species) return null
+  if (!gen.species.get(toID(attackerState.species)) || !gen.species.get(toID(defenderState.species))) return null
+  const attacker = buildPokemon(attackerState)
+  const defender = buildPokemon(defenderState)
+  const gameType = battle.gameType ?? 'Doubles'
+  const field = buildField(fieldState, attackerSide, gameType)
+  const isSpreadMove = info.target === 'allAdjacentFoes' || info.target === 'allAdjacent'
+  const singleTarget = gameType === 'Doubles' && isSpreadMove && (battle.targetCount ?? 2) <= 1
+  const move = new Move(gen, moveName, { ability: attacker.ability, item: attacker.item, species: attacker.name, isCrit: false, ...(singleTarget ? { overrides: { target: 'normal' as const } } : {}) })
+  try {
+    const r = calculate(gen, attacker, defender, move, field)
+    const [min, max] = r.range()
+    const acc = EXTRA.moves[moveName]?.acc
+    return { min, max, maxHP: defender.maxHP(), curHP: defender.curHP(), accuracy: acc === undefined ? 100 : acc }
+  } catch {
+    return null
+  }
+}
+
 export function computeMove(
   moveName: string,
   attackerState: PokemonState,

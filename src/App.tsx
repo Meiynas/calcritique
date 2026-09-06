@@ -10,6 +10,7 @@ import { cleanSet, loadLibrary, newId, saveLibrary, type Library } from './lib/l
 import LibraryModal from './components/LibraryModal'
 import SpeedTiersModal from './components/SpeedTiersModal'
 import TypeChartModal from './components/TypeChartModal'
+import MatrixModal from './components/MatrixModal'
 import { flinchChance, cantActChance } from './lib/status'
 import { label } from './lib/names'
 import TeamColumn from './components/TeamColumn'
@@ -54,6 +55,7 @@ export default function App() {
   }
   const [showSpeed, setShowSpeed] = useState<SideKey | null>(null)
   const [showTypes, setShowTypes] = useState(false)
+  const [showMatrix, setShowMatrix] = useState(false)
   // Thème : sombre (défaut), clair, pastel. Mémorisé dans le navigateur / l'application.
   const [theme, setTheme] = useState<Theme>(() => { try { const v = localStorage.getItem(THEME_KEY); return v === 'light' || v === 'pastel' ? v : 'dark' } catch { return 'dark' } })
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function App() {
         const actChance = (1 - preFlinch) * (1 - cantActChance(a.pokemon, a.move).chance)
         return a.targets.map((tg) => {
           const defender = state.teams[tg.side][tg.index]
-          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, preFlinch, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length, actChance }) }
+          return { actor: a.actor, target: tg, attacker: a.pokemon, defender, preFlinch, targetCount: a.targets.length, result: computeMove(a.move, a.pokemon, defender, state.field, state.options, a.actor.side, { gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: a.targets.length, actChance }) }
         })
       }),
     [turn, state],
@@ -169,6 +171,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted">
             <UpdateBadge status={update} lang={state.lang} />
+            <button type="button" onClick={() => setShowMatrix(true)} className="rounded border border-border px-2 py-1 hover:text-text">⊞ {t.matrixShort}</button>
             <button type="button" onClick={() => setShowTypes(true)} className="rounded border border-border px-2 py-1 hover:text-text">🧬 {t.typeChart}</button>
             <button type="button" onClick={() => setShowSpeed('left')} className="rounded border border-border px-2 py-1 hover:text-text">⚡ {t.speedTiers}</button>
             <button type="button" onClick={() => setShowLibrary('sets')} className="rounded border border-border px-2 py-1 hover:text-text">📚 {t.library}</button>
@@ -237,7 +240,7 @@ export default function App() {
                         <span className={d.actor.side === 'left' ? 'text-accent' : 'text-sky-400'}>{label('species', d.attacker.species, state.lang)}</span> {t.vs}{' '}
                         <span className={d.target.side === 'left' ? 'text-accent' : 'text-sky-400'}>{label('species', d.defender.species, state.lang)}</span>
                       </div>
-                      <Results results={[d.result]} attacker={d.attacker} defender={d.defender} field={state.field} preFlinch={d.preFlinch} lang={state.lang} activeMove={0} compact />
+                      <Results results={[d.result]} attacker={d.attacker} defender={d.defender} field={state.field} preFlinch={d.preFlinch} side={d.actor.side} battle={{ gameType: state.mode === '1v1' ? 'Singles' : 'Doubles', targetCount: d.targetCount }} lang={state.lang} activeMove={0} compact />
                     </div>
                   ) : null,
                 )}
@@ -250,6 +253,7 @@ export default function App() {
         </div>
       </main>
 
+      {showMatrix && <MatrixModal state={state} lang={state.lang} onClose={() => setShowMatrix(false)} />}
       {showTypes && <TypeChartModal state={state} lang={state.lang} onClose={() => setShowTypes(false)} />}
       {showSpeed && (
         <SpeedTiersModal
