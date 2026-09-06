@@ -318,6 +318,11 @@ Ajouté en v1.15.2 (6 septembre 2026) : dégâts de contact.
 - Peau Dure / Épine de Fer (1/8 des PV max du lanceur par coup de contact) et Casque Brut (1/6 par coup) dans le déroulé du tour (residual.contactDamage, ligne "PV du lanceur" avec la raison). Par coup pour les multi-coups (Dé Pipé compris) ; rien si l'attaque n'est pas de contact, si elle rate, si Abri la bloque, si le Clone a tout encaissé, ou si le lanceur a Garde Magik, Longue Portée ou les Patins Protecteurs. 20 tests.
 - Plus aucun tiret cadratin dans le projet (descriptions d'attaques en anglais nettoyées, le script build-movedesc.py les remplace désormais par un tiret normal).
 
+Ajouté en v1.16.0 (6 septembre 2026) : bibliothèque en texte.
+- Export / import de la bibliothèque par copier-coller, comme sur Showdown, plus besoin de fichier. Boutons "Tout exporter en texte" (remplit la zone de l'onglet Texte Showdown et copie dans le presse-papiers) et "Importer du texte" dans l'en-tête de la bibliothèque ; dans l'onglet, "Importer dans la bibliothèque" lit la zone de texte.
+- Format (src/lib/showdown.ts, exportLibraryText / parseLibraryText) : celui de la sauvegarde du teambuilder Showdown : une ligne "=== [team] Nom ===" ou "=== [set] Nom ===" avant chaque bloc au format pokepaste. À l'import, une vraie sauvegarde Showdown ("=== [gen9vgc] Dossier/Nom ===") passe aussi ; sans ligne "===", un seul Pokémon = un set, plusieurs = une équipe. Les sets et équipes importés sont ajoutés (jamais écrasés).
+- La sauvegarde en fichier JSON reste disponible en petit sous la zone de texte (elle garde aussi les identifiants ; l'import de fichier accepte le JSON ou le texte). 21 tests.
+
 Limites connues à traiter plus tard :
 - Pas encore de filtre de légalité par régulation (tous les Pokémon connus du moteur sont proposés, hors fakemons).
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -333,6 +338,7 @@ Limites connues à traiter plus tard :
 - 2026-09-05 : forme du produit : logiciel Windows (Tauri) en priorité, mises à jour automatiques via GitHub Releases, aucun hébergement à gérer. Version site web gardée en option avec le même code.
 - 2026-09-06 : dépôt GitHub créé (Meiynas/calcritique, public). Étape 0 réalisée (squelette, Tauri, mise à jour automatique, workflows, v0.1.0 publiée). L'humain a donné son accord global pour avancer sans redemander confirmation à chaque étape.
 - 2026-09-06 : V1 (étape 1) réalisée et publiée en v1.0.0 : calculateur 1 contre 1 complet avec vrai taux de KO. Voir section 9 ter.
+- 2026-09-06 : v1.16.0 : bibliothèque exportable / importable en texte (format sauvegarde Showdown), à la demande de l'humain.
 - 2026-09-06 : v1.15.2 : Peau Dure / Épine de Fer / Casque Brut dans le tour ; plus de tirets cadratins nulle part.
 - 2026-09-06 : v1.15.1 : analyse par attaque simplifiée (trimOffensive / trimDefensive : seulement les seuils atteignables avec des SP, plus le plus haut "déjà" et le plus bas "hors de portée", et l'inverse en défense) ; les attaques sur 2 tours et Mitra-Poing (TWO_TURN_MOVES déplacé dans advice.ts) sont écartées des "autres attaques qui OHKO".
 - 2026-09-06 : v1.15.0 : Clone (case + mécanique dans le tour, multi-coups qui traversent), Dé Pipé, Grand Nettoyage / Anti-Brume / Tour Rapide.

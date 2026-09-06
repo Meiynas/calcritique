@@ -9,7 +9,7 @@ import Modal from './Modal'
 import TypeBadge from './TypeBadge'
 import { SPRITES } from './Tooltips'
 import { moveInfo } from '../lib/engine'
-import { exportPokemon, exportTeam, parseTeam } from '../lib/showdown'
+import { exportLibraryText, exportPokemon, exportTeam, parseLibraryText, parseTeam } from '../lib/showdown'
 
 interface Props {
   library: Library
@@ -59,19 +59,47 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
   function doExport() {
     downloadText(`calcritique-bibliotheque-${new Date().toISOString().slice(0, 10)}.json`, exportLibraryJSON(library))
   }
-  async function copyExport() {
-    try { await navigator.clipboard.writeText(exportLibraryJSON(library)); flash(t.libCopied) } catch { flash(t.libCopyFailed) }
-  }
-  function doImport(file: File) {
+    function doImport(file: File) {
     file.text().then((txt) => {
       try {
         const imported = fixLibrary(JSON.parse(txt))
         onChange(mergeLibrary(library, imported))
         flash(t.libImported(imported.sets.length, imported.teams.length))
       } catch {
-        flash(t.libImportFailed)
+        // Pas du JSON : on tente le format texte
+        if (!importText(txt)) flash(t.libImportFailed)
       }
     })
+  }
+  /** Toute la bibliothèque en texte (format Showdown avec des lignes "=== [set] Nom ==="), dans la zone de texte et le presse-papiers */
+  async function exportAllText() {
+    const txt = exportLibraryText(library.sets, library.teams)
+    setSdText(txt)
+    setSdWarnings([])
+    setTab('showdown')
+    try { await navigator.clipboard.writeText(txt); flash(t.libCopied) } catch { /* presse-papiers indisponible : le texte est dans la zone */ }
+  }
+  /** Importe du texte dans la bibliothèque : sets et équipes. Retourne faux si rien n'a été lu. */
+  function importText(txt: string): boolean {
+    const r = parseLibraryText(txt)
+    setSdWarnings(r.warnings)
+    if (r.sections.length === 0) return false
+    const now = Date.now()
+    const newSets: SavedSet[] = []
+    const newTeams: SavedTeam[] = []
+    for (const sec of r.sections) {
+      if (sec.kind === 'team') {
+        const full = sec.team.map(cleanSet)
+        while (full.length < 6) full.push(cleanSet({ ...sec.team[0], species: '' }))
+        newTeams.push({ id: newId(), name: sec.name || `${t.libTeams} ${library.teams.length + newTeams.length + 1}`, team: full.slice(0, 6), createdAt: now })
+      } else {
+        const p = sec.team[0]
+        newSets.push({ id: newId(), name: sec.name || `${label('species', p.species, lang)}${p.item ? ' ' + label('items', p.item, lang) : ''}`, pokemon: cleanSet(p), createdAt: now })
+      }
+    }
+    onChange({ ...library, sets: [...newSets, ...library.sets], teams: [...newTeams, ...library.teams] })
+    flash(t.libImported(newSets.length, newTeams.length))
+    return true
   }
 
   return (
@@ -93,10 +121,9 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
         )}
         <span className="ml-auto flex items-center gap-1.5">
           {message && <span className="text-emerald-300">{message}</span>}
-          <button type="button" onClick={doExport} className="rounded border border-border px-2 py-1 hover:text-text">⬇ {t.libExport}</button>
-          <button type="button" onClick={copyExport} className="rounded border border-border px-2 py-1 hover:text-text">📋 {t.libCopy}</button>
-          <button type="button" onClick={() => fileRef.current?.click()} className="rounded border border-border px-2 py-1 hover:text-text">⬆ {t.libImport}</button>
-          <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = '' }} />
+          <button type="button" onClick={exportAllText} className="rounded border border-border px-2 py-1 hover:text-text" title={t.libExportTextHint}>📋 {t.libExportText}</button>
+          <button type="button" onClick={() => { setTab('showdown'); setSdText('') }} className="rounded border border-border px-2 py-1 hover:text-text" title={t.libImportTextHint}>⬆ {t.libImportText}</button>
+          <input ref={fileRef} type="file" accept="application/json,.json,.txt,text/plain" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = '' }} />
         </span>
       </div>
       <p className="px-4 pt-2 text-[11px] text-muted">{tab === 'teams' ? t.libTeamsHint : tab === 'showdown' ? t.sdHint : t.libHint}</p>
@@ -126,6 +153,7 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setSdText(exportTeam(teams.left))} className="rounded border border-accent/60 bg-accent/10 px-2 py-1 hover:bg-accent/20">{t.sdExport(1)}</button>
               <button type="button" onClick={() => setSdText(exportTeam(teams.right))} className="rounded border border-sky-400/60 bg-sky-400/10 px-2 py-1 hover:bg-sky-400/20">{t.sdExport(2)}</button>
+              <button type="button" onClick={exportAllText} className="rounded border border-border px-2 py-1 hover:text-text" title={t.libExportTextHint}>{t.libExportText}</button>
               <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(sdText); flash(t.libCopied) } catch { flash(t.libCopyFailed) } }} className="rounded border border-border px-2 py-1 hover:text-text">📋 {t.libCopy}</button>
             </div>
             <textarea className="input min-h-64 font-mono text-[11px]" value={sdText} onChange={(e) => setSdText(e.target.value)} placeholder={t.sdPlaceholder} spellCheck={false} />
@@ -153,20 +181,19 @@ export default function LibraryModal({ library, onChange, teams, onLoadSet, onLo
               ))}
               <button
                 type="button"
-                onClick={() => {
-                  const r = parseTeam(sdText)
-                  setSdWarnings(r.warnings)
-                  if (r.team.length === 0) { flash(t.sdNothing); return }
-                  const sets = r.team.map((p) => ({ id: newId(), name: `${label('species', p.species, lang)}${p.item ? ' ' + label('items', p.item, lang) : ''}`, pokemon: cleanSet(p), createdAt: Date.now() }))
-                  onChange({ ...library, sets: [...sets, ...library.sets] })
-                  flash(t.sdSavedSets(sets.length))
-                }}
-                className="rounded border border-border px-2 py-1 hover:text-text"
+                onClick={() => { if (!importText(sdText)) flash(t.sdNothing) }}
+                className="rounded border border-emerald-400/60 bg-emerald-400/10 px-2 py-1 hover:bg-emerald-400/20"
+                title={t.libImportTextHint}
               >
                 💾 {t.sdToLibrary}
               </button>
             </div>
             {sdWarnings.length > 0 && <ul className="list-disc pl-5 text-orange-300">{sdWarnings.map((w, i) => <li key={i}>{w}</li>)}</ul>}
+            <p className="mt-2 text-[11px] text-muted">
+              {t.libFileHint}{' '}
+              <button type="button" onClick={doExport} className="underline hover:text-text">⬇ {t.libExport}</button>{' · '}
+              <button type="button" onClick={() => fileRef.current?.click()} className="underline hover:text-text">⬆ {t.libImport}</button>
+            </p>
           </div>
         )}
         {tab === 'teams' && (

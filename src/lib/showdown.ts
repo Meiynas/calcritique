@@ -143,3 +143,48 @@ function resolveSpecies(text: string): string | null {
   }
   return null
 }
+
+// ---------- Bibliothèque entière en texte (copier / coller, comme la sauvegarde du teambuilder Showdown) ----------
+// Chaque set ou équipe est précédé d'une ligne "=== [set] Nom ===" ou "=== [team] Nom ===".
+// À l'import, une sauvegarde Showdown ("=== [gen9vgc] Dossier/Nom ===") est aussi acceptée : un bloc de plusieurs Pokémon
+// devient une équipe, un bloc d'un seul Pokémon devient un set. Sans ligne "===" : même règle (un pokepaste = une équipe).
+
+export interface TextSection { kind: 'set' | 'team'; name: string; team: PokemonState[] }
+
+export function exportLibraryText(sets: { name: string; pokemon: PokemonState }[], teams: { name: string; team: PokemonState[] }[]): string {
+  const parts: string[] = []
+  for (const tm of teams) parts.push(`=== [team] ${tm.name.trim() || 'Team'} ===\n\n${exportTeam(tm.team)}`)
+  for (const s of sets) parts.push(`=== [set] ${s.name.trim() || s.pokemon.species} ===\n\n${exportPokemon(s.pokemon)}`)
+  return parts.join('\n\n\n')
+}
+
+const HEADER = /^===\s*(?:\[([^\]]*)\]\s*)?(.*?)\s*===\s*$/
+
+export function parseLibraryText(text: string): { sections: TextSection[]; warnings: string[] } {
+  const warnings: string[] = []
+  const lines = text.replace(/\r/g, '').split('\n')
+  const raw: { tag: string; name: string; body: string[] }[] = []
+  let cur: { tag: string; name: string; body: string[] } | null = null
+  for (const line of lines) {
+    const h = line.match(HEADER)
+    if (h) { cur = { tag: (h[1] ?? '').toLowerCase(), name: h[2].trim(), body: [] }; raw.push(cur); continue }
+    if (!cur) { cur = { tag: '', name: '', body: [] }; raw.push(cur) }
+    cur.body.push(line)
+  }
+  const sections: TextSection[] = []
+  for (const r of raw) {
+    const parsed = parseTeam(r.body.join('\n'))
+    warnings.push(...parsed.warnings)
+    if (parsed.team.length === 0) continue
+    const headerless = r.tag === '' && r.name === ''
+    if (headerless) {
+      // Sans en-tête : un seul Pokémon = un set, plusieurs = une équipe (un pokepaste est une équipe)
+      sections.push(parsed.team.length === 1 ? { kind: 'set', name: '', team: parsed.team } : { kind: 'team', name: '', team: parsed.team })
+      continue
+    }
+    const name = r.name.includes('/') ? r.name.slice(r.name.lastIndexOf('/') + 1).trim() : r.name
+    const kind: 'set' | 'team' = r.tag === 'set' ? 'set' : r.tag === 'team' ? 'team' : parsed.team.length > 1 ? 'team' : 'set'
+    sections.push({ kind, name, team: parsed.team })
+  }
+  return { sections, warnings }
+}

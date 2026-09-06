@@ -377,3 +377,23 @@ test('tour : Peau Dure et Casque Brut blessent le lanceur au contact (par coup p
   const mausHP = r4.scenarios.average.actions.find((a) => a.action.move === 'Earthquake')!.hits[0].maxHP
   assert.equal(rs4.delta, -Math.floor(mausHP / 8) * 4)
 })
+
+test('bibliothèque en texte : aller-retour sets + équipes, sauvegarde Showdown, texte sans en-tête', async () => {
+  const { exportLibraryText, parseLibraryText } = await import('../src/lib/showdown')
+  const sets = [{ name: 'Kingambit Sash', pokemon: defaultPokemon('Kingambit', { item: 'Focus Sash', moves: ['Kowtow Cleave', 'Sucker Punch', '', ''] }) }]
+  const teams = [{ name: 'Sand', team: [defaultPokemon('Garchomp'), defaultPokemon('Tyranitar'), defaultPokemon(''), defaultPokemon(''), defaultPokemon(''), defaultPokemon('')] }]
+  const txt = exportLibraryText(sets, teams)
+  assert.ok(txt.includes('=== [team] Sand ===') && txt.includes('=== [set] Kingambit Sash ==='))
+  const r = parseLibraryText(txt)
+  assert.equal(r.warnings.length, 0)
+  assert.deepEqual(r.sections.map((s) => [s.kind, s.name, s.team.length]), [['team', 'Sand', 2], ['set', 'Kingambit Sash', 1]])
+  assert.equal(r.sections[1].team[0].item, 'Focus Sash')
+  // Sauvegarde du teambuilder Showdown : dossier/nom, plusieurs Pokémon = équipe
+  const sd = '=== [gen9vgc2026] Ladder/Mon équipe ===\n\nGarchomp @ Life Orb\nAbility: Rough Skin\n- Earthquake\n\nIncineroar\n- Fake Out\n'
+  const r2 = parseLibraryText(sd)
+  assert.deepEqual(r2.sections.map((s) => [s.kind, s.name, s.team.length]), [['team', 'Mon équipe', 2]])
+  // Sans en-tête : plusieurs Pokémon = une équipe, un seul = un set
+  const r3 = parseLibraryText('Garchomp\n- Earthquake\n\nIncineroar\n- Fake Out')
+  assert.deepEqual(r3.sections.map((s) => s.kind), ['team'])
+  assert.deepEqual(parseLibraryText('Garchomp\n- Earthquake').sections.map((s) => s.kind), ['set'])
+})
