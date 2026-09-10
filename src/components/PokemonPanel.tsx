@@ -4,7 +4,7 @@ import type { Lang, PokemonState, StatKey, StatusKey } from '../model'
 import { STAT_KEYS, SWITCH_IN } from '../model'
 import { dict } from '../i18n'
 import { label, NAMES } from '../lib/names'
-import { EXTRA, TYPE_NAMES, finalStats, megaAbility, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
+import { EXTRA, TYPE_NAMES, finalStats, isChampionsItem, megaAbility, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
 import { SP_MAX_STAT, SP_MAX_TOTAL, spTotal } from '../lib/champions'
 import { canLearn, mostPlayedSet, usageFor, usagePercent } from '../lib/usage'
 import { isProtecting } from '../lib/engine'
@@ -198,6 +198,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
         <Field label={t.item}>
           <button type="button" onClick={() => setPicker({ kind: 'item' })} className="input text-left hover:border-accent">
             {value.item ? label('items', value.item, lang) : <span className="text-muted">{t.none}</span>}
+            {value.item && !isChampionsItem(value.item) && <span className="ml-1 text-[10px] text-accent" title={t.itemNotInChampions}>⚠</span>}
             <UsageTag pct={value.item ? usagePercent(value.species, 'items', value.item) : undefined} />
           </button>
         </Field>

@@ -9,9 +9,7 @@ import { typesOf } from '../lib/status'
 import Modal from './Modal'
 import TypeBadge, { TYPE_COLORS } from './TypeBadge'
 import { SPRITES } from './Tooltips'
-import { Generations } from '@smogon/calc'
-
-const gen = Generations.get(9)
+import { gen } from '../lib/gen'
 
 /** Multiplicateur d'un type d'attaque sur un Pokémon (types actuels + immunités et réductions de talents) */
 export function defensiveMultiplier(atkType: string, p: PokemonState): number {
@@ -20,7 +18,7 @@ export function defensiveMultiplier(atkType: string, p: PokemonState): number {
   let m = 1
   for (const ty of typesOf(p)) m *= (at.effectiveness as Record<string, number>)[ty] ?? 1
   const a = p.ability
-  if (atkType === 'Ground' && (a === 'Levitate' || a === 'Earth Eater' || p.item === 'Air Balloon')) return 0
+  if (atkType === 'Ground' && (a === 'Levitate' || a === 'Eelevate' || a === 'Earth Eater' || p.item === 'Air Balloon')) return 0
   if (atkType === 'Electric' && ['Volt Absorb', 'Lightning Rod', 'Motor Drive'].includes(a)) return 0
   if (atkType === 'Water' && ['Water Absorb', 'Storm Drain', 'Dry Skin'].includes(a)) return 0
   if (atkType === 'Fire' && ['Flash Fire', 'Well-Baked Body'].includes(a)) return 0

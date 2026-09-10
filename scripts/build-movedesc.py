@@ -3,8 +3,13 @@
 
 Source : PokéAPI move_flavor_text.csv (langue 5 = français, 9 = anglais) + move_names.csv.
 """
-import csv, json, sys
+import csv, json, re, sys, unicodedata
 from pathlib import Path
+
+
+def norm(s):
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", s.lower())
 
 POKEAPI = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/pokeapi")
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,10 +33,11 @@ with open(POKEAPI / "move_flavor_text.csv", encoding="utf-8", newline="") as f:
             txt = " ".join(r["flavor_text"].replace("­\n", "").replace("\n", " ").replace("\u2014", " - ").split())
             best[key] = (vg, txt)
 
-known = set(NAMES["moves"].keys())
+known = {norm(k): k for k in NAMES["moves"].keys()}  # "King's Shield" (moteur) = "King’s Shield" (PokéAPI)
 out = {}
-for mid, en in move_en.items():
-    if en not in known:
+for mid, pokeapi_en in move_en.items():
+    en = known.get(norm(pokeapi_en))
+    if not en:
         continue
     fr = best.get((mid, "5"), (0, ""))[1]
     e = best.get((mid, "9"), (0, ""))[1]

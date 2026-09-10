@@ -1,7 +1,7 @@
 {
   "name": "calcritique",
   "private": true,
-  "version": "1.16.3",
+  "version": "1.17.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,7 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
-    "@smogon/calc": "^0.11.0",
+    "@smogon/calc": "file:vendor/smogon-calc.tgz",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.11.0",

@@ -2,12 +2,13 @@
 // de l'écran, lance le calcul, puis ajoute ce que Showdown ne fait pas :
 // le VRAI taux de KO (précision x rolls x critiques) sur 1 à N attaques.
 
-import { calculate, Field, Generations, Move, Pokemon, toID } from "@smogon/calc"
+import { calculate, Field, Move, Pokemon, toID } from "@smogon/calc"
 import type { FieldState, PokemonState, SideState, SideKey, CalcOptions, StatKey } from '../model'
-import { spToEvs, LEVEL } from './champions'
+import { LEVEL, SP_MAX_STAT } from './champions'
+import { gen } from './gen'
 import extraJson from '../data/extra.json'
 
-const gen = Generations.get(9)
+export { gen }
 
 interface Extra {
   moves: Record<string, { acc: number | null; prio: number }>
@@ -46,15 +47,22 @@ export const TYPE_NAMES: string[] = Array.from(gen.types).map((t) => t.name).fil
 
 // ---------- Construction des objets du moteur ----------
 
+/** Vrai si l'objet existe dans Pokémon Champions (liste du moteur). */
+export function isChampionsItem(item: string | undefined): boolean {
+  return !!item && !!gen.items.get(toID(item))
+}
+
 export function buildPokemon(p: PokemonState): Pokemon {
   const evs: Partial<Record<StatKey, number>> = {}
-  for (const k of Object.keys(p.sp) as StatKey[]) evs[k] = spToEvs(p.sp[k])
+  // Mode Champions : le moteur prend directement les SP (0 à 32) à la place des EV
+  for (const k of Object.keys(p.sp) as StatKey[]) evs[k] = Math.max(0, Math.min(SP_MAX_STAT, Math.round(p.sp[k] || 0)))
   const base = new Pokemon(gen, p.species, {
     level: LEVEL,
     nature: p.nature || 'Serious',
     evs,
-    item: p.item || undefined,
-    ability: effectiveAbility(p) || undefined,
+    // Objet ou talent absent de Champions (vieux set, import Showdown) : ignoré par le moteur, qui planterait sinon
+    item: (isChampionsItem(p.item) ? p.item : undefined) as never,
+    ability: ((effectiveAbility(p) && gen.abilities.get(toID(effectiveAbility(p))) ? effectiveAbility(p) : undefined)) as never,
     teraType: ((p.teraActive !== false && p.teraType) || undefined) as never,
     boosts: p.boosts,
     status: p.status,
@@ -301,12 +309,12 @@ export function computeMove(
     return calculate(gen, attacker.clone(), defender.clone(), move, field.clone())
   }
 
-  // Abri : bloque tout sauf les attaques qui le percent (Ruse...) ou Poing Invisible sur une attaque de contact
+  // Abri : bloque tout sauf les attaques qui le percent (Ruse...) ou Poing Invisible / Transperceuse sur une attaque de contact
   let blockedByProtect = false
   let protectBypass: MoveResult['protectBypass']
   if (isProtecting(defenderState) && info.category !== 'Status') {
     if (info.breaksProtect) protectBypass = 'feint'
-    else if (attacker.hasAbility('Unseen Fist') && info.flags?.contact) protectBypass = 'unseenFist'
+    else if (attacker.hasAbility('Unseen Fist', 'Piercing Drill') && info.flags?.contact) protectBypass = 'unseenFist'
     else blockedByProtect = true
   }
 

@@ -88,7 +88,7 @@ export function canConfuse(move: string, attacker: PokemonState, target: Pokemon
   const info = moveInfo(move)
   const isStatusMove = !info || info.category === 'Status'
   const types = typesOf(target)
-  const grounded = !types.includes('Flying') && target.ability !== 'Levitate' && target.item !== 'Air Balloon'
+  const grounded = !types.includes('Flying') && target.ability !== 'Levitate' && target.ability !== 'Eelevate' && target.item !== 'Air Balloon'
   if (field.terrain === 'Misty' && grounded) return false
   if (isStatusMove) {
     if (target.ability === 'Good as Gold') return false
@@ -133,7 +133,7 @@ export function flinchChance(move: string, attacker: PokemonState, target: Pokem
 export function canReceiveStatus(status: InflictedStatus, move: string, target: PokemonState, field: FieldState): boolean {
   if (target.status) return false
   const types = typesOf(target)
-  const grounded = !types.includes('Flying') && target.ability !== 'Levitate' && target.item !== 'Air Balloon'
+  const grounded = !types.includes('Flying') && target.ability !== 'Levitate' && target.ability !== 'Eelevate' && target.item !== 'Air Balloon'
   if (['Comatose', 'Purifying Salt'].includes(target.ability)) return false
   if (field.terrain === 'Misty' && grounded) return false
   if (POWDER_MOVES.includes(move) && (types.includes('Grass') || target.ability === 'Overcoat' || target.item === 'Safety Goggles')) return false

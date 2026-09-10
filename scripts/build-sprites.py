@@ -3,6 +3,7 @@
 
 Source : dépôt PokeAPI/sprites (icônes génération VIII, 40 px, quelques centaines d'octets chacune).
 Repli : sprite 96 px classique quand l'icône n'existe pas (formes récentes).
+Seules les icônes des Pokémon qui n'en ont pas encore sont téléchargées ; --refresh pour tout retélécharger.
 """
 import base64, io, json, sys, urllib.request
 from pathlib import Path
@@ -39,9 +40,8 @@ for name in sorted(LEARN):
     if not info:
         continue
     if name in old and "--refresh" not in sys.argv:
-        # ancienne valeur : on la renormalise (décodage puis recadrage)
-        raw = base64.b64decode(old[name].split(",", 1)[1])
-        out[name] = "data:image/png;base64," + base64.b64encode(normalize(raw)).decode()
+        # icône déjà connue (déjà recadrée) : gardée telle quelle, pour que le fichier ne change pas d'une nuit à l'autre
+        out[name] = old[name]
         continue
     pid = info["id"]
     data = None

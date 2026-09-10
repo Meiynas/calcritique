@@ -37,7 +37,7 @@ test('précision : Exploforce à 70 % réduit le taux de KO', () => {
 })
 
 test('précision : Œil Composé et Gravité montent la précision, plafond 100', () => {
-  const atk = defaultPokemon('Vikavolt', { ability: 'Compound Eyes', moves: ['Thunder', '', '', ''] })
+  const atk = defaultPokemon('Vivillon', { ability: 'Compound Eyes', moves: ['Thunder', '', '', ''] })
   const def = defaultPokemon('Rillaboom')
   const r = computeMove('Thunder', atk, def, field, opts)!
   assert.equal(r.accuracy.effective, 91)
@@ -66,7 +66,7 @@ test('vitesse : Vent Arrière et Distorsion inversent le verdict', () => {
 })
 
 test('doubles : une attaque à cibles multiples fait x0,75', () => {
-  const atk = defaultPokemon('Landorus-Therian', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, ability: 'Intimidate' })
+  const atk = defaultPokemon('Garchomp', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, ability: 'Rough Skin' })
   const def = defaultPokemon('Rillaboom')
   const spread = computeMove('Earthquake', atk, def, field, opts)!
   const single = computeMove('Stomping Tantrum', atk, def, field, opts)!
@@ -76,13 +76,14 @@ test('doubles : une attaque à cibles multiples fait x0,75', () => {
   assert.ok(Math.abs(spread.max - single.max) <= 2)
 })
 
-test('Abri : bloque une attaque normale, pas Ruse ni Poing Invisible sur un contact', () => {
+test('Abri : bloque une attaque normale, pas Ruse ni Transperceuse (Méga-Minotaupe) sur un contact', () => {
   const atk = defaultPokemon('Sneasler', { nature: 'Jolly', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, ability: 'Unburden' })
   const def = defaultPokemon('Garchomp', { protect: true })
   assert.ok(computeMove('Close Combat', atk, def, field, opts)!.blockedByProtect)
   assert.equal(computeMove('Feint', atk, def, field, opts)!.protectBypass, 'feint')
-  const urshifu = defaultPokemon('Urshifu', { ability: 'Unseen Fist', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 } })
-  assert.equal(computeMove('Close Combat', urshifu, def, field, opts)!.protectBypass, 'unseenFist')
+  const drill = defaultPokemon('Excadrill-Mega', { ability: 'Piercing Drill', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 } })
+  assert.equal(computeMove('Drill Run', drill, def, field, opts)!.protectBypass, 'unseenFist')
+  assert.ok(computeMove('Earthquake', drill, def, field, opts)!.blockedByProtect) // pas de contact : bloquée
 })
 
 test('stades : -1 esquive et +1 précision se compensent', () => {
@@ -310,23 +311,23 @@ test('tour : Provoc bloque une attaque de statut jouée après, Farceur échoue 
   assert.equal(r2.scenarios.average.actions.find((a) => a.action.move === 'Taunt')!.skipped, 'prankster')
 })
 
-test('Clone : encaisse une attaque simple, une attaque multi-coups le casse et continue ; Dé Pipé = 4 coups ; Grand Nettoyage retire les Clones', async () => {
+test('Clone : encaisse une attaque simple, une attaque multi-coups le casse et continue ; Multi-Coups = 5 coups ; Grand Nettoyage retire les Clones', async () => {
   const { simulateTurn } = await import('../src/lib/turn')
   const { defaultState } = await import('../src/model')
   const st = defaultState()
   st.mode = '2v2'
-  st.teams.left[0] = defaultPokemon('Cloyster', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, item: 'Loaded Dice', ability: 'Shell Armor', moves: ['Icicle Spear', '', '', ''], target: 0 })
+  st.teams.left[0] = defaultPokemon('Toucannon', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, ability: 'Skill Link', moves: ['Bullet Seed', '', '', ''], target: 0 })
   st.teams.left[1] = defaultPokemon('Kingambit', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, moves: ['Kowtow Cleave', '', '', ''], target: 1 })
   st.teams.right[0] = defaultPokemon('Garchomp', { substitute: true, moves: ['Protect', '', '', ''] })
   st.teams.right[1] = defaultPokemon('Toxapex', { substitute: true, moves: ['Protect', '', '', ''] })
   st.teams.right[0].moves[0] = 'Swords Dance'
   st.teams.right[1].moves[0] = 'Toxic'
   st.active = { left: [0, 1], right: [0, 1] }
-  const r = computeMove('Icicle Spear', st.teams.left[0], st.teams.right[0], field, opts)!
-  assert.equal(r.hits, 4) // Dé Pipé
+  const r = computeMove('Bullet Seed', st.teams.left[0], st.teams.right[0], field, opts)!
+  assert.equal(r.hits, 5) // Multi-Coups
   const avg = simulateTurn(st).scenarios.average
-  const rb = avg.actions.find((a) => a.action.move === 'Icicle Spear')!
-  assert.ok(rb.hits[0].subBroken) // 4 coups : le Clone (25 %) casse et les coups restants touchent
+  const rb = avg.actions.find((a) => a.action.move === 'Bullet Seed')!
+  assert.ok(rb.hits[0].subBroken) // 5 coups : le Clone (25 %) casse et les coups restants touchent
   assert.ok(rb.hits[0].damage > 0)
   const kc = avg.actions.find((a) => a.action.move === 'Kowtow Cleave')!
   assert.ok(kc.hits[0].subDamage! > 0)
@@ -396,4 +397,55 @@ test('bibliothèque en texte : aller-retour sets + équipes, sauvegarde Showdown
   const r3 = parseLibraryText('Garchomp\n- Earthquake\n\nIncineroar\n- Fake Out')
   assert.deepEqual(r3.sections.map((s) => s.kind), ['team'])
   assert.deepEqual(parseLibraryText('Garchomp\n- Earthquake').sections.map((s) => s.kind), ['set'])
+})
+
+test('mode Champions : nouveautés de la régulation M-C (Méga Z, talents, puissance modifiée, pool légal)', async () => {
+  const { LEGAL_SPECIES, learnset } = await import('../src/lib/usage')
+  const { label } = await import('../src/lib/names')
+  const { megaAbility } = await import('../src/lib/engine')
+  // Pool légal et attaques apprenables à jour (Pokémon Showdown)
+  for (const s of ['Rillaboom', 'Baxcalibur', 'Garchomp-Mega-Z', 'Lucario-Mega-Z', 'Absol-Mega-Z', 'Salamence-Mega', 'Squawkabilly']) assert.ok(LEGAL_SPECIES.includes(s), s)
+  assert.ok(learnset('Rillaboom').includes('Grassy Glide'))
+  assert.ok(learnset('Garchomp-Mega-Z').includes('Earthquake')) // une Méga reprend les attaques de sa forme de base
+  assert.equal(label('species', 'Garchomp-Mega-Z', 'fr'), 'Méga-Carchacrok Z')
+  assert.equal(label('items', 'Garchompite Z', 'fr'), 'Carchacrokite Z')
+  // Talents des nouvelles Méga (données Champions, pas celles de Légendes Z-A)
+  assert.equal(megaAbility('Garchomp-Mega-Z'), 'Levitate')
+  assert.equal(megaAbility('Lucario-Mega-Z'), 'Aura Guard')
+  // Lévitation : Séisme ne touche pas Méga-Carchacrok Z
+  const eq = computeMove('Earthquake', defaultPokemon('Garchomp', { moves: ['Earthquake', '', '', ''] }), defaultPokemon('Garchomp-Mega-Z', { ability: 'Levitate' }), field, opts)!
+  assert.equal(eq.max, 0)
+  // Garde Aura : les attaques de contact font moitié moins de dégâts
+  const atk = defaultPokemon('Kingambit', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 } })
+  const withAura = computeMove('Iron Head', atk, defaultPokemon('Lucario-Mega-Z', { ability: 'Aura Guard' }), field, opts)!
+  const without = computeMove('Iron Head', atk, defaultPokemon('Lucario-Mega', { ability: 'Adaptability' }), field, opts)!
+  assert.ok(withAura.max < without.max * 0.6)
+  // Puissance propre à Champions : Tranche passe à 80
+  assert.equal(computeMove('Slash', atk, defaultPokemon('Rillaboom'), field, opts)!.basePower, 80)
+})
+
+test('mode Champions : un objet absent du jeu (vieux set, import) est ignoré sans planter', () => {
+  const atk = defaultPokemon('Kingambit', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, item: 'Choice Band' })
+  const plain = defaultPokemon('Kingambit', { nature: 'Adamant', sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 }, item: '' })
+  const def = defaultPokemon('Rillaboom', { item: 'Assault Vest' })
+  const a = computeMove('Kowtow Cleave', atk, def, field, opts)!
+  const b = computeMove('Kowtow Cleave', plain, defaultPokemon('Rillaboom'), field, opts)!
+  assert.equal(a.max, b.max)
+  assert.ok(computeMove('Knock Off', plain, def, field, opts)!.max > 0)
+})
+
+test('set automatique : la pierre Méga choisit la bonne Méga (Carchacrokite Z -> Méga-Carchacrok Z)', async () => {
+  const { mostPlayedSet, USAGE } = await import('../src/lib/usage')
+  const saved = USAGE.data.garchomp
+  USAGE.data.garchomp = { name: 'Garchomp', moves: [['Earthquake', 50]], items: [['Garchompite Z', 60]], abilities: [['Rough Skin', 90]], natures: [['Jolly', 70]], spreads: [[0, 32, 0, 0, 2, 32, 40]], teammates: [] }
+  try {
+    const set = mostPlayedSet('Garchomp')
+    assert.equal(set.species, 'Garchomp-Mega-Z')
+    assert.equal(set.ability, 'Levitate')
+    USAGE.data.garchomp = { ...USAGE.data.garchomp, items: [['Garchompite', 60]] }
+    assert.equal(mostPlayedSet('Garchomp').species, 'Garchomp-Mega')
+  } finally {
+    if (saved) USAGE.data.garchomp = saved
+    else delete USAGE.data.garchomp
+  }
 })

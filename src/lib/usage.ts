@@ -1,4 +1,4 @@
-// Statistiques d'usage (Champions Battle Data) et learnsets Champions (PokéAPI).
+// Statistiques d'usage (Champions Battle Data) et learnsets Champions (Pokémon Showdown, régulation en cours).
 // Sert aux presets (set le plus joué), aux suggestions (attaques, objets, coéquipiers)
 // et au pool légal.
 
@@ -8,9 +8,7 @@ import learnsetsJson from '../data/learnsets.json'
 import { NAMES } from './names'
 import { speciesInfo, moveInfo, megaAbility } from './engine'
 import { emptyPokemon, type PokemonState, type StatKey } from '../model'
-import { Generations } from '@smogon/calc'
-
-const gen = Generations.get(9)
+import { gen } from './gen'
 
 export interface UsageEntry {
   name: string
@@ -50,7 +48,7 @@ export function usageFor(species: string): UsageEntry | undefined {
 // Nom d'affichage des stats -> clé du moteur (ex : "Basculegion Male" -> "basculegion")
 const NAME_TO_KEY: Record<string, string> = {}
 for (const [k, e] of Object.entries(USAGE.data)) NAME_TO_KEY[e.name] = k
-NAME_TO_KEY['Maushold'] = 'mausholdfour'
+if (USAGE.data.mausholdfour && !USAGE.data.maushold) NAME_TO_KEY['Maushold'] = 'mausholdfour'
 
 // Clé d'usage -> nom d'espèce du moteur
 const KEY_TO_SPECIES: Record<string, string> = {}
@@ -133,8 +131,11 @@ export function mostPlayedSet(species: string): PokemonState {
   while (moves.length < 4) moves.push('')
   let finalSpecies = species
   if (item && !species.includes('-Mega')) {
+    // La pierre dit quelle Méga elle donne (Carchacrokite Z -> Méga-Carchacrok Z) ; Pokemon.getForme du moteur
+    // prend toujours la première Méga de l'espèce, d'où le repli seulement si la pierre ne le précise pas.
+    const stone = (gen.items.get(toID(item)) as { megaStone?: Record<string, string> } | undefined)?.megaStone
     try {
-      const forme = Pokemon.getForme(gen, species, item as never)
+      const forme = stone?.[species] ?? Pokemon.getForme(gen, species, item as never)
       if (forme && forme !== species && forme.includes('-Mega')) finalSpecies = forme
     } catch {
       /* pas de forme spéciale */

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Construit src/data/names.json : noms français et anglais pour tout ce que connaît le moteur de calcul.
+"""Construit src/data/names.json : noms français et anglais pour tout ce que connaît le moteur de calcul (mode Champions).
 
-Sources : fichiers CSV de PokéAPI (dossier /tmp/pokeapi, voir README des données) et
-la liste des noms du moteur @smogon/calc (fichier /tmp/calcnames.json, généré avec node).
+Sources : fichiers CSV de PokéAPI (dossier téléchargé par scripts/fetch-sources.sh), la liste des noms du moteur
+@smogon/calc (calcnames.json, écrit par scripts/build-showdown-data.mts) et scripts/names-fr.json (noms saisis à la main).
+Usage : python3 scripts/build-names.py <dossier pokeapi> <calcnames.json>
 Langues PokéAPI : 5 = français, 9 = anglais.
 """
 import csv, json, re, unicodedata, sys
@@ -11,6 +12,8 @@ from pathlib import Path
 POKEAPI = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/pokeapi")
 CALC = json.load(open(sys.argv[2] if len(sys.argv) > 2 else "/tmp/calcnames.json"))
 OUT = Path(__file__).resolve().parent.parent / "src" / "data" / "names.json"
+# Noms français saisis à la main pour ce que PokéAPI ne connaît pas encore (nouvelles Méga-Gemmes...)
+OVERRIDES = json.load(open(Path(__file__).resolve().parent / "names-fr.json", encoding="utf-8"))
 
 FR, EN = "5", "9"
 
@@ -86,6 +89,11 @@ ALIASES = {
     "ursaluna-bloodmoon": "ursaluna-bloodmoon",
     "terapagos-terastal": "terapagos-terastal",
     "terapagos-stellar": "terapagos-stellar",
+    "maushold-four": "maushold-family-of-four",
+    "squawkabilly": "squawkabilly-green-plumage",
+    "squawkabilly-blue": "squawkabilly-blue-plumage",
+    "squawkabilly-white": "squawkabilly-white-plumage",
+    "squawkabilly-yellow": "squawkabilly-yellow-plumage",
 }
 
 def species_entry(name):
@@ -134,6 +142,13 @@ items_table = simple_table(read("item_names"), "item_id", CALC["items"], "objets
 abilities_table = simple_table(read("ability_names"), "ability_id", CALC["abilities"], "talents")
 natures_table = simple_table(read("nature_names"), "nature_id", CALC["natures"], "natures")
 types_table = simple_table(read("type_names"), "type_id", CALC["types"], "types")
+
+for kind, table in (("species", species_table), ("moves", moves_table), ("items", items_table), ("abilities", abilities_table)):
+    for en, fr in OVERRIDES.get(kind, {}).items():
+        if en in table:
+            table[en]["fr"] = fr
+left = [n for n, e in items_table.items() if e["fr"] == n] + [n for n, e in abilities_table.items() if e["fr"] == n]
+print(f"après les noms manuels (scripts/names-fr.json), identiques en anglais (nom officiel identique ou traduction manquante) : {', '.join(left) or 'aucun'}", file=sys.stderr)
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 json.dump(

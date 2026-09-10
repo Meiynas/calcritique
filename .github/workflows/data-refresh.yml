@@ -1,20 +1,28 @@
-# Mise à jour automatique des données, chaque nuit à 2 h (heure de Paris en été ; 1 h en hiver).
-# 1. Récupère les statistiques d'usage sur championsbattledata.com (src/data/usage.json).
-# 2. Met à jour le moteur de calcul @smogon/calc (paquet npm, source Showdown / Smogon) si une version compatible existe.
-# 3. Si quelque chose a changé et que les tests passent : nouvelle version (x.y.Z+1), commit, étiquette,
-#    puis publication de l'installeur Windows et du site (les workflows release.yml et pages.yml sont appelés directement,
-#    car un push fait par le robot GitHub ne déclenche pas les autres workflows).
+# Mise à jour automatique du moteur et des données, toutes les 6 heures (et à la demande, bouton "Run workflow").
+# 1. Moteur de calcul : construit depuis le GitHub de Showdown (smogon/damage-calc), qui ajoute les nouveautés
+#    de chaque régulation Champions quelques heures après leur sortie (le paquet npm n'est presque jamais publié).
+# 2. Pool légal, attaques apprenables, noms FR / EN, précision, talents, descriptions, icônes :
+#    Pokémon Showdown (data/mods/champions) + PokéAPI + PokeAPI/sprites (scripts/refresh-data.sh).
+# 3. Statistiques d'usage : championsbattledata.com (scripts/fetch-usage.mjs).
+# 4. Si quelque chose a changé, que les tests passent et que le site se construit : nouvelle version (x.y.Z+1),
+#    commit, étiquette, puis publication de l'installeur Windows et du site (release.yml et pages.yml sont appelés
+#    directement, car un push fait par le robot GitHub ne déclenche pas les autres workflows).
+# Une source en panne ne bloque pas les autres : on garde simplement ses anciennes données.
 name: Mise à jour automatique des données
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
   pages: write
   id-token: write
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -29,39 +37,74 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet pillow
       - run: npm ci
+
+      - name: Moteur de calcul (GitHub de Showdown)
+        id: engine
+        run: bash scripts/build-engine.sh "$RUNNER_TEMP/sources"
+        continue-on-error: true
+
+      - name: Sources (PokéAPI, Pokémon Showdown)
+        id: sources
+        run: bash scripts/fetch-sources.sh "$RUNNER_TEMP/sources"
+        continue-on-error: true
+
+      - name: Pool légal, noms, descriptions, icônes
+        if: steps.sources.outcome == 'success'
+        run: |
+          npx --no-install tsx scripts/build-showdown-data.mts "$RUNNER_TEMP/sources/showdown" "$RUNNER_TEMP/sources"
+          python3 scripts/build-names.py "$RUNNER_TEMP/sources/pokeapi" "$RUNNER_TEMP/sources/calcnames.json"
+          python3 scripts/build-extra.py "$RUNNER_TEMP/sources/pokeapi" "$RUNNER_TEMP/sources/calcnames.json" "$RUNNER_TEMP/sources/showdown.json"
+          python3 scripts/build-movedesc.py "$RUNNER_TEMP/sources/pokeapi"
+          python3 scripts/build-sprites.py
+        continue-on-error: true
 
       - name: Statistiques d'usage (championsbattledata.com)
         run: node scripts/fetch-usage.mjs
         continue-on-error: true
 
-      - name: Moteur de calcul (@smogon/calc)
-        run: npm update @smogon/calc --save
-        continue-on-error: true
-
       - name: Quelque chose a changé ?
         id: changed
         run: |
-          if git diff --quiet -- src/data/usage.json package.json package-lock.json; then
+          PATHS="src/data vendor package.json package-lock.json"
+          if [ -z "$(git status --porcelain -- $PATHS)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git --no-pager diff --stat
+            echo "Rien de nouveau."
+            exit 0
           fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git status --short -- $PATHS
+          PARTS=()
+          if [ -n "$(git status --porcelain -- vendor)" ]; then PARTS+=("moteur Showdown"); fi
+          if [ -n "$(git status --porcelain -- src/data/learnsets.json)" ]; then PARTS+=("Pokémon et attaques de la régulation"); fi
+          if [ -n "$(git status --porcelain -- src/data/names.json src/data/extra.json src/data/movedesc.json src/data/sprites.json)" ]; then PARTS+=("noms, talents, icônes"); fi
+          if [ -n "$(git status --porcelain -- src/data/usage.json)" ]; then PARTS+=("statistiques d'usage"); fi
+          SUMMARY=$(printf '%s, ' "${PARTS[@]}")
+          SUMMARY="${SUMMARY%, }"
+          echo "summary=${SUMMARY:-données}" >> "$GITHUB_OUTPUT"
 
-      - name: Tests
+      - name: Vérifications (installation propre, tests, construction du site)
         if: steps.changed.outputs.changed == 'true'
-        run: npm test
+        run: |
+          npm ci
+          npm test
+          npm run build:web
 
       - name: Nouvelle version, commit et étiquette
         id: bump
         if: steps.changed.outputs.changed == 'true'
+        env:
+          SUMMARY: ${{ steps.changed.outputs.summary }}
         run: |
           VERSION=$(node scripts/bump-version.mjs)
           git config user.name "calcritique-bot"
           git config user.email "calcritique-bot@users.noreply.github.com"
           git add -A
-          git commit -m "Données du $(date -u +%Y-%m-%d) : statistiques d'usage et moteur à jour (v$VERSION)"
+          git commit -m "Données du $(date -u +%Y-%m-%d) : $SUMMARY (v$VERSION)"
           git tag "v$VERSION"
           git push origin main "v$VERSION"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"

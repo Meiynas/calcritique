@@ -1,11 +1,11 @@
 // Entrée sur le terrain ("switch") : applique les pièges du côté du Pokémon,
 // remet les boosts à zéro, et Toile Gluante baisse la Vitesse.
-import { Generations, toID } from '@smogon/calc'
+import { toID } from '@smogon/calc'
 import type { FieldState, PokemonState, SideState } from '../model'
 import { zeroStats } from '../model'
 import { finalStats, speciesInfo } from './engine'
 
-const gen = Generations.get(9)
+import { gen } from './gen'
 
 export interface SwitchResult {
   pokemon: PokemonState
@@ -23,7 +23,7 @@ function types(p: PokemonState): string[] {
 export function isGrounded(p: PokemonState, field: FieldState): boolean {
   if (field.gravity || p.item === 'Iron Ball') return true
   if (types(p).includes('Flying')) return false
-  if (p.ability === 'Levitate') return false
+  if (p.ability === 'Levitate' || p.ability === 'Eelevate') return false
   if (p.item === 'Air Balloon') return false
   return true
 }

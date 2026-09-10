@@ -33,3 +33,6 @@ secrets/
 # Fichiers de transfert / tests
 *.tgz
 .deltest
+
+# Moteur de calcul construit depuis GitHub (voir scripts/build-engine.sh) : à publier
+!vendor/*.tgz

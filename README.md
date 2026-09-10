@@ -9,7 +9,10 @@ Le brief complet du projet (objectifs, fonctionnalités, décisions) est dans `C
 
 ## Pour Claude : comment est organisé le projet
 
-- `src/` : l'interface (React + TypeScript + Tailwind). `src/lib/engine.ts` fait le lien avec le moteur de dégâts et calcule le vrai taux de KO ; `src/lib/names.ts` la recherche FR / EN ; `src/data/` les données générées par `scripts/`. `src/updater.ts` gère la mise à jour automatique.
+- `src/` : l'interface (React + TypeScript + Tailwind). `src/lib/engine.ts` fait le lien avec le moteur de dégâts (mode Champions, `src/lib/gen.ts`) et calcule le vrai taux de KO ; `src/lib/names.ts` la recherche FR / EN ; `src/data/` les données générées par `scripts/`. `src/updater.ts` gère la mise à jour automatique.
+- `vendor/smogon-calc.tgz` : le moteur de calcul de Showdown, construit depuis leur GitHub par `scripts/build-engine.sh`.
+- `scripts/refresh-data.sh` : régénère le pool légal, les attaques apprenables, les noms, les descriptions et les icônes (sources : Pokémon Showdown, PokéAPI). `scripts/fetch-usage.mjs` : statistiques d'usage.
+- `.github/workflows/data-refresh.yml` : le robot qui lance tout ça toutes les 6 heures et publie une nouvelle version quand quelque chose a changé (nouvelle régulation, nouveaux Pokémon, statistiques).
 - `src-tauri/` : l'enveloppe "logiciel Windows" (Tauri 2). `tauri.conf.json` contient la clé publique des mises à jour et l'adresse où le logiciel cherche les nouvelles versions.
 - `.github/workflows/release.yml` : fabrique l'installeur Windows et le publie sur GitHub Releases quand on pousse une étiquette `vX.Y.Z`.
 - `.github/workflows/pages.yml` : publie la version site sur GitHub Pages à chaque changement sur `main`.
