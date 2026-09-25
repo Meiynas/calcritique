@@ -203,12 +203,13 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
   const t = dict(lang)
   const [editing, setEditing] = useState<null | 'hp' | 'pct'>(null)
   const [draft, setDraft] = useState('')
+  const [hoverHalf, setHoverHalf] = useState<number | null>(null)
   const sp = speciesInfo(mon.species)
   const activeRing = side === 'left' ? 'border-accent ring-1 ring-accent/60 ' : 'border-sky-400 ring-1 ring-sky-400/60 '
   const ring = (active ? activeRing : 'border-border hover:border-muted ') + (onField ? 'bg-surface' : 'bg-surface/50 opacity-75')
   if (!mon.species || !sp) {
     return (
-      <button type="button" onClick={onClick} onDoubleClick={onDoubleClick} className={'rounded-lg border border-dashed bg-surface/60 px-2 py-2 text-left text-xs text-muted ' + ring}>
+      <button type="button" onClick={onDoubleClick} className={'rounded-lg border border-dashed bg-surface/60 px-2 py-2 text-left text-xs text-muted ' + ring}>
         + {t.emptySlot}
       </button>
     )
@@ -216,55 +217,81 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
   const maxHP = finalStats(mon).hp
   const cur = Math.round((maxHP * mon.curHPPercent) / 100)
   const hpColor = mon.curHPPercent > 50 ? 'bg-emerald-400' : mon.curHPPercent > 20 ? 'bg-amber-400' : 'bg-accent'
+  const color = side === 'left' ? 'accent' : 'sky'
+  const halfTint = color === 'accent' ? 'bg-accent/25' : 'bg-sky-400/25'
+  const badgeOn = color === 'accent' ? 'bg-accent text-white' : 'bg-sky-500 text-white'
+  const posLabel = (pos: number) => (maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●')
+  // En 2v2 : moitié gauche = A, moitié droite = B. En 1v1 : toute la carte.
+  const halfAt = (clientX: number, el: HTMLElement) => {
+    if (maxActive < 2) return 0
+    const r = el.getBoundingClientRect()
+    return clientX - r.left < r.width / 2 ? 0 : 1
+  }
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
-      title={t.dblClickHint}
-      className={'cursor-pointer rounded-lg border px-2 py-1.5 text-left ' + ring}
+      onClick={(e) => onSetActive(halfAt(e.clientX, e.currentTarget))}
+      onMouseMove={(e) => { const h = halfAt(e.clientX, e.currentTarget); if (h !== hoverHalf) setHoverHalf(h) }}
+      onMouseLeave={() => setHoverHalf(null)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key.toLowerCase() === 'a') onSetActive(0)
+        if (maxActive === 2 && e.key.toLowerCase() === 'b') onSetActive(1)
+      }}
+      title={maxActive === 2 ? t.cardHalvesHint : t.putOnField}
+      className={'relative cursor-pointer overflow-hidden rounded-lg border px-2 py-1.5 text-left ' + ring}
     >
-      <div className="flex items-center justify-between gap-1">
+      {/* Zones A / B : teinte au survol, lettre en filigrane */}
+      {Array.from({ length: maxActive }, (_, pos) => {
+        const here = onField && fieldPos === pos
+        const hovered = hoverHalf === pos && !here
+        const width = maxActive === 2 ? 'w-1/2' : 'w-full'
+        const place = maxActive === 2 ? (pos === 0 ? 'left-0' : 'right-0') : 'left-0'
+        return (
+          <div
+            key={pos}
+            aria-hidden
+            className={'pointer-events-none absolute inset-y-0 flex items-center justify-center transition-colors ' + width + ' ' + place + ' ' + (hovered ? halfTint : '')}
+          >
+            {hovered && <span className="text-3xl font-black text-white/35">{posLabel(pos)}</span>}
+          </div>
+        )
+      })}
+      {maxActive === 2 && hoverHalf !== null && <div aria-hidden className="pointer-events-none absolute inset-y-1 left-1/2 w-px bg-white/25" />}
+      <div className="relative flex items-center justify-between gap-1">
         <span className="flex min-w-0 items-center gap-1">
-          <span className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
-            {Array.from({ length: maxActive }, (_, pos) => {
-              const here = onField && fieldPos === pos
-              const on = side === 'left' ? 'bg-accent text-white border-accent' : 'bg-sky-500 text-white border-sky-500'
-              return (
-                <button
-                  key={pos}
-                  type="button"
-                  title={t.putOnField + (maxActive === 2 ? ` (${pos === 0 ? 'A' : 'B'})` : '')}
-                  onClick={() => onSetActive(pos)}
-                  className={'rounded border px-1 text-[9px] font-bold uppercase ' + (here ? on : 'border-border bg-surface-2 text-muted hover:text-text')}
-                >
-                  {maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●'}
-                </button>
-              )
-            })}
-          </span>
+          {onField && <span className={'shrink-0 rounded px-1 text-[9px] font-bold ' + badgeOn}>{posLabel(fieldPos)}</span>}
           <Hover tip={<PokemonTip species={mon.species} lang={lang} />} className="flex min-w-0 items-center gap-1 truncate text-sm font-semibold">
             {SPRITES[mon.species] && <img src={SPRITES[mon.species]} alt="" className="inline-block h-7 w-7 shrink-0 object-contain align-middle" style={{ imageRendering: 'pixelated' }} />}
             {label('species', mon.species, lang)}
           </Hover>
         </span>
-        <button
-          type="button"
-          title={t.switchInTitle}
-          onClick={(e) => { e.stopPropagation(); onSwitch() }}
-          onDoubleClick={(e) => e.stopPropagation()}
-          className="ml-1 shrink-0 rounded border border-border bg-surface-2 px-1.5 text-[11px] text-muted hover:border-accent hover:text-text"
-        >
-          ⇄
-        </button>
+        <span className="ml-1 flex shrink-0 gap-0.5">
+          <button
+            type="button"
+            title={t.editCardHint}
+            onClick={(e) => { e.stopPropagation(); onClick() }}
+            onMouseMove={(e) => e.stopPropagation()}
+            className={'rounded border px-1.5 text-[11px] ' + (active ? (color === 'accent' ? 'border-accent bg-accent/20 text-text' : 'border-sky-400 bg-sky-400/20 text-text') : 'border-border bg-surface-2 text-muted hover:border-accent hover:text-text')}
+          >
+            ✎
+          </button>
+          <button
+            type="button"
+            title={t.switchInTitle}
+            onClick={(e) => { e.stopPropagation(); onSwitch() }}
+            onMouseMove={(e) => e.stopPropagation()}
+            className="rounded border border-border bg-surface-2 px-1.5 text-[11px] text-muted hover:border-accent hover:text-text"
+          >
+            ⇄
+          </button>
+        </span>
       </div>
-      <div className="flex items-center justify-between gap-1 text-[11px] text-muted">
+      <div className="relative flex items-center justify-between gap-1 text-[11px] text-muted">
         <span className="min-w-0 truncate">{mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}${mon.teraActive ? '' : ' (off)'}` : ''}</span>
         <span className="flex shrink-0 items-center gap-0.5">{sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
       </div>
-      <div className="mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div className="relative mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onMouseMove={(e) => { e.stopPropagation(); if (hoverHalf !== null) setHoverHalf(null) }}>
         <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/10">
           <div className={'absolute inset-y-0 left-0 rounded-full ' + hpColor} style={{ width: `${mon.curHPPercent}%` }} />
           <input
@@ -297,7 +324,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
         )}
       </div>
       {toast && (
-        <div className="mt-1 rounded bg-surface-2 px-1.5 py-1 text-[10px] leading-tight text-emerald-200">
+        <div className="relative mt-1 rounded bg-surface-2 px-1.5 py-1 text-[10px] leading-tight text-emerald-200">
           {toast.map((l, i) => <div key={i}>{l}</div>)}
         </div>
       )}

@@ -348,6 +348,12 @@ Ajouté en v1.18.0 (25 septembre 2026, demande de l'humain) : forme Méga respec
 - Changer l'objet garde la forme cohérente (usage.withItem, utilisé par la fenêtre d'objets et les puces d'objets des sets populaires) : une Méga qui perd sa pierre (autre objet ou aucun) redevient le Pokémon normal, avec son talent le plus joué ; un Pokémon normal qui reçoit sa pierre passe en Méga (Carchacrokite Z -> Méga-Carchacrok Z, Carchacrokite -> Méga-Carchacrok).
 - Robot réparé : depuis le 18 septembre 2026, chaque passage échouait à "npm ci" car package-lock.json gardait l'empreinte de l'ancienne archive du moteur (npm install ne la recalcule pas pour une archive locale). scripts/build-engine.sh écrit maintenant la bonne empreinte et la bonne version dans package-lock.json. 25 tests.
 
+Ajouté en v1.19.0 (25 septembre 2026, demande de l'humain : "on clique trop vite sur la carte sans cliquer sur le point") : cartes coupées en deux.
+- En 2v2, cliquer la moitié gauche d'une carte met le Pokémon en A, la moitié droite en B (au survol, la moitié visée se teinte et affiche la lettre). En 1v1, toute la carte met en jeu. Mettre en jeu sélectionne aussi le Pokémon pour la fiche (comme avant avec les boutons).
+- Les petits boutons A / B (ou ●) de la carte sont supprimés ; un badge A / B reste affiché à gauche du nom quand le Pokémon est en jeu.
+- Nouveau bouton ✎ à côté de ⇄ : ouvre la fiche du Pokémon sans le mettre en jeu (surligné quand c'est la fiche affichée). La barre de PV et les valeurs de PV ne déclenchent pas la mise en jeu.
+- Emplacement vide : un simple clic ouvre la fenêtre de choix du Pokémon. Clavier : Entrée ou A = en A, B = en B.
+
 Limites connues à traiter plus tard :
 - Le pool suit la régulation en cours (données Showdown) ; il n'y a pas de choix d'une ancienne régulation.
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -357,6 +363,7 @@ Limites connues à traiter plus tard :
 
 ## 10. Journal des décisions
 
+- 2026-09-25 : v1.19.0 : sélection des Pokémon en jeu par moitiés de carte (gauche = A, droite = B) et bouton ✎ pour éditer, choisi par l'humain parmi 4 options (terrain / banc, clic = mise en jeu, menu au survol, carte coupée).
 - 2026-09-25 : v1.18.0 : cliquer un Pokémon normal = forme normale (plus de Méga automatique), retirer la pierre = retour à la forme normale, donner la pierre = Méga. Robot de mise à jour réparé (empreinte du moteur dans package-lock.json).
 - 2026-09-10 : v1.17.0 : moteur construit depuis le GitHub de Showdown en mode Champions (génération 0) ; pool légal, attaques apprenables, noms, talents, précision et icônes régénérés automatiquement toutes les 6 heures depuis Pokémon Showdown, PokéAPI et PokeAPI/sprites. Régulation M-C intégrée (35 Pokémon et formes). Constat : la Téra n'est pas légale en M-C.
 
