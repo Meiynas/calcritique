@@ -219,6 +219,12 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
   const hpColor = mon.curHPPercent > 50 ? 'bg-emerald-400' : mon.curHPPercent > 20 ? 'bg-amber-400' : 'bg-accent'
   const color = side === 'left' ? 'accent' : 'sky'
   const halfTint = color === 'accent' ? 'bg-accent/25' : 'bg-sky-400/25'
+  // Moitié où le Pokémon est placé : dégradé depuis le bord + grande lettre en fond
+  const placedTint = (pos: number) =>
+    maxActive < 2
+      ? (color === 'accent' ? 'bg-accent/15' : 'bg-sky-400/15')
+      : (pos === 0 ? 'bg-gradient-to-r ' : 'bg-gradient-to-l ') + (color === 'accent' ? 'from-accent/35 to-accent/5' : 'from-sky-400/35 to-sky-400/5')
+  const placedLetter = color === 'accent' ? 'text-accent/30' : 'text-sky-400/30'
   const badgeOn = color === 'accent' ? 'bg-accent text-white' : 'bg-sky-500 text-white'
   const posLabel = (pos: number) => (maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●')
   // En 2v2 : moitié gauche = A, moitié droite = B. En 1v1 : toute la carte.
@@ -251,8 +257,9 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
           <div
             key={pos}
             aria-hidden
-            className={'pointer-events-none absolute inset-y-0 flex items-center justify-center transition-colors ' + width + ' ' + place + ' ' + (hovered ? halfTint : '')}
+            className={'pointer-events-none absolute inset-y-0 flex items-center justify-center transition-colors ' + width + ' ' + place + ' ' + (here ? placedTint(pos) : hovered ? halfTint : '')}
           >
+            {here && maxActive === 2 && <span className={'select-none text-6xl font-black leading-none ' + placedLetter}>{posLabel(pos)}</span>}
             {hovered && <span className="text-3xl font-black text-white/35">{posLabel(pos)}</span>}
           </div>
         )

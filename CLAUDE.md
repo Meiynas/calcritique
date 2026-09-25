@@ -353,6 +353,7 @@ Ajouté en v1.19.0 (25 septembre 2026, demande de l'humain : "on clique trop vit
 - Les petits boutons A / B (ou ●) de la carte sont supprimés ; un badge A / B reste affiché à gauche du nom quand le Pokémon est en jeu.
 - Nouveau bouton ✎ à côté de ⇄ : ouvre la fiche du Pokémon sans le mettre en jeu (surligné quand c'est la fiche affichée). La barre de PV et les valeurs de PV ne déclenchent pas la mise en jeu.
 - Emplacement vide : un simple clic ouvre la fenêtre de choix du Pokémon. Clavier : Entrée ou A = en A, B = en B.
+- v1.19.1 : la moitié où le Pokémon est placé reste marquée en fond (dégradé de la couleur de l'équipe depuis le bord gauche pour A, droit pour B, et grande lettre A / B en filigrane) ; en 1v1, légère teinte sur toute la carte.
 
 Limites connues à traiter plus tard :
 - Le pool suit la régulation en cours (données Showdown) ; il n'y a pas de choix d'une ancienne régulation.
@@ -363,6 +364,7 @@ Limites connues à traiter plus tard :
 
 ## 10. Journal des décisions
 
+- 2026-09-25 : v1.19.1 : position A / B visible en fond de carte (demande de l'humain).
 - 2026-09-25 : v1.19.0 : sélection des Pokémon en jeu par moitiés de carte (gauche = A, droite = B) et bouton ✎ pour éditer, choisi par l'humain parmi 4 options (terrain / banc, clic = mise en jeu, menu au survol, carte coupée).
 - 2026-09-25 : v1.18.0 : cliquer un Pokémon normal = forme normale (plus de Méga automatique), retirer la pierre = retour à la forme normale, donner la pierre = Méga. Robot de mise à jour réparé (empreinte du moteur dans package-lock.json).
 - 2026-09-10 : v1.17.0 : moteur construit depuis le GitHub de Showdown en mode Champions (génération 0) ; pool légal, attaques apprenables, noms, talents, précision et icônes régénérés automatiquement toutes les 6 heures depuis Pokémon Showdown, PokéAPI et PokeAPI/sprites. Régulation M-C intégrée (35 Pokémon et formes). Constat : la Téra n'est pas légale en M-C.
