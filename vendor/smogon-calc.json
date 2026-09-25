@@ -1,7 +1,7 @@
 {
   "source": "https://github.com/smogon/damage-calc.git",
-  "commit": "d7a69cf40616057ef40faf7623df7a628e58b535",
-  "tree": "f448d374b3bd140b4a73fc6e4e120e5cf64065d7",
-  "date": "2026-09-18",
-  "version": "0.11.0-git.d7a69cf"
+  "commit": "7382953118bf82abc9f2446919c7cd8237ce9ea1",
+  "tree": "b492fc5e973b9b0d55798c1837f089f10ac671d5",
+  "date": "2026-09-25",
+  "version": "0.12.0-git.7382953"
 }
