@@ -354,6 +354,7 @@ Ajouté en v1.19.0 (25 septembre 2026, demande de l'humain : "on clique trop vit
 - Nouveau bouton ✎ à côté de ⇄ : ouvre la fiche du Pokémon sans le mettre en jeu (surligné quand c'est la fiche affichée). La barre de PV et les valeurs de PV ne déclenchent pas la mise en jeu.
 - Emplacement vide : un simple clic ouvre la fenêtre de choix du Pokémon. Clavier : Entrée ou A = en A, B = en B.
 - v1.19.1 : la moitié où le Pokémon est placé reste marquée en fond (dégradé de la couleur de l'équipe depuis le bord gauche pour A, droit pour B, et grande lettre A / B en filigrane) ; en 1v1, légère teinte sur toute la carte.
+- v1.19.2 : le badge A / B devant le nom est retiré (il décalait l'icône et le nom selon que le Pokémon était en jeu ou non) ; la position se lit uniquement sur le fond de la carte.
 
 Limites connues à traiter plus tard :
 - Le pool suit la régulation en cours (données Showdown) ; il n'y a pas de choix d'une ancienne régulation.

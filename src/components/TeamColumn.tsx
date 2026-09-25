@@ -225,7 +225,6 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
       ? (color === 'accent' ? 'bg-accent/15' : 'bg-sky-400/15')
       : (pos === 0 ? 'bg-gradient-to-r ' : 'bg-gradient-to-l ') + (color === 'accent' ? 'from-accent/35 to-accent/5' : 'from-sky-400/35 to-sky-400/5')
   const placedLetter = color === 'accent' ? 'text-accent/30' : 'text-sky-400/30'
-  const badgeOn = color === 'accent' ? 'bg-accent text-white' : 'bg-sky-500 text-white'
   const posLabel = (pos: number) => (maxActive === 2 ? (pos === 0 ? 'A' : 'B') : '●')
   // En 2v2 : moitié gauche = A, moitié droite = B. En 1v1 : toute la carte.
   const halfAt = (clientX: number, el: HTMLElement) => {
@@ -267,7 +266,6 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
       {maxActive === 2 && hoverHalf !== null && <div aria-hidden className="pointer-events-none absolute inset-y-1 left-1/2 w-px bg-white/25" />}
       <div className="relative flex items-center justify-between gap-1">
         <span className="flex min-w-0 items-center gap-1">
-          {onField && <span className={'shrink-0 rounded px-1 text-[9px] font-bold ' + badgeOn}>{posLabel(fieldPos)}</span>}
           <Hover tip={<PokemonTip species={mon.species} lang={lang} />} className="flex min-w-0 items-center gap-1 truncate text-sm font-semibold">
             {SPRITES[mon.species] && <img src={SPRITES[mon.species]} alt="" className="inline-block h-7 w-7 shrink-0 object-contain align-middle" style={{ imageRendering: 'pixelated' }} />}
             {label('species', mon.species, lang)}
