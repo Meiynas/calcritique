@@ -434,18 +434,37 @@ test('mode Champions : un objet absent du jeu (vieux set, import) est ignoré sa
   assert.ok(computeMove('Knock Off', plain, def, field, opts)!.max > 0)
 })
 
-test('set automatique : la pierre Méga choisit la bonne Méga (Carchacrokite Z -> Méga-Carchacrok Z)', async () => {
+test('set automatique : la forme choisie est respectée (normal = pas de pierre, Méga = sa pierre)', async () => {
   const { mostPlayedSet, USAGE } = await import('../src/lib/usage')
   const saved = USAGE.data.garchomp
-  USAGE.data.garchomp = { name: 'Garchomp', moves: [['Earthquake', 50]], items: [['Garchompite Z', 60]], abilities: [['Rough Skin', 90]], natures: [['Jolly', 70]], spreads: [[0, 32, 0, 0, 2, 32, 40]], teammates: [] }
+  USAGE.data.garchomp = { name: 'Garchomp', moves: [['Earthquake', 50]], items: [['Garchompite Z', 60], ['Choice Scarf', 20]], abilities: [['Rough Skin', 90]], natures: [['Jolly', 70]], spreads: [[0, 32, 0, 0, 2, 32, 40]], teammates: [] }
   try {
-    const set = mostPlayedSet('Garchomp')
-    assert.equal(set.species, 'Garchomp-Mega-Z')
-    assert.equal(set.ability, 'Levitate')
-    USAGE.data.garchomp = { ...USAGE.data.garchomp, items: [['Garchompite', 60]] }
-    assert.equal(mostPlayedSet('Garchomp').species, 'Garchomp-Mega')
+    const normal = mostPlayedSet('Garchomp')
+    assert.equal(normal.species, 'Garchomp')
+    assert.equal(normal.item, 'Choice Scarf')
+    assert.equal(normal.ability, 'Rough Skin')
+    const megaZ = mostPlayedSet('Garchomp-Mega-Z')
+    assert.equal(megaZ.item, 'Garchompite Z')
+    assert.equal(megaZ.ability, 'Levitate')
+    assert.equal(megaZ.nature, 'Jolly')
+    assert.equal(mostPlayedSet('Garchomp-Mega').item, 'Garchompite')
   } finally {
     if (saved) USAGE.data.garchomp = saved
     else delete USAGE.data.garchomp
   }
+})
+
+test('objet : retirer la pierre Méga rend la forme normale, donner la pierre fait méga-évoluer', async () => {
+  const { withItem } = await import('../src/lib/usage')
+  const mega = defaultPokemon('Garchomp-Mega-Z', { item: 'Garchompite Z', ability: 'Levitate' })
+  const off = withItem(mega, 'Choice Scarf')
+  assert.equal(off.species, 'Garchomp')
+  assert.equal(off.item, 'Choice Scarf')
+  assert.notEqual(off.ability, 'Levitate')
+  assert.equal(withItem(mega, '').species, 'Garchomp')
+  const back = withItem(off, 'Garchompite Z')
+  assert.equal(back.species, 'Garchomp-Mega-Z')
+  assert.equal(back.ability, 'Levitate')
+  assert.equal(withItem(mega, 'Garchompite').species, 'Garchomp-Mega') // une autre pierre de la même espèce
+  assert.equal(withItem(defaultPokemon('Kingambit'), 'Garchompite').species, 'Kingambit') // pierre d'un autre Pokémon
 })

@@ -68,6 +68,17 @@ cat > "$META" <<JSON
 JSON
 echo "Moteur écrit dans vendor/smogon-calc.tgz ($(du -k "$TGZ" | cut -f1) Ko)" >&2
 
-# Met à jour node_modules et package-lock.json avec la nouvelle archive
+# Met à jour package-lock.json avec l'empreinte de la nouvelle archive : npm install ne la recalcule pas
+# pour une archive locale déjà connue, et npm ci refusait ensuite l'installation (arrivé le 18 septembre 2026).
 cd "$ROOT"
+node -e "
+const fs = require('fs'), crypto = require('crypto')
+const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'))
+const e = lock.packages && lock.packages['node_modules/@smogon/calc']
+if (e) {
+  e.version = '$BASE_VERSION-git.$SHORT'
+  e.integrity = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync('$TGZ')).digest('base64')
+  fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\\n')
+}
+"
 npm install --no-audit --no-fund --loglevel=error >&2

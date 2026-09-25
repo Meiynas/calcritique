@@ -6,7 +6,7 @@ import { dict } from '../i18n'
 import { label, NAMES } from '../lib/names'
 import { EXTRA, TYPE_NAMES, finalStats, isChampionsItem, megaAbility, moveInfo, natureInfo, speciesInfo } from '../lib/engine'
 import { SP_MAX_STAT, SP_MAX_TOTAL, spTotal } from '../lib/champions'
-import { canLearn, mostPlayedSet, usageFor, usagePercent } from '../lib/usage'
+import { canLearn, mostPlayedSet, usageFor, usagePercent, withItem } from '../lib/usage'
 import { isProtecting } from '../lib/engine'
 import SearchSelect from './SearchSelect'
 import TypeBadge from './TypeBadge'
@@ -358,7 +358,7 @@ export default function PokemonPanel({ title, role, value, onChange, onClear, te
       {picker?.kind === 'move' && (
         <MovePicker species={value.species} currentMoves={value.moves} lang={lang} onPick={(m) => { setMove(picker.slot, m); setPicker(null) }} onClose={() => setPicker(null)} />
       )}
-      {picker?.kind === 'item' && <ItemPicker species={value.species} lang={lang} onPick={(i) => { set('item', i); setPicker(null) }} onClose={() => setPicker(null)} />}
+      {picker?.kind === 'item' && <ItemPicker species={value.species} lang={lang} onPick={(i) => { onChange(withItem(value, i)); setPicker(null) }} onClose={() => setPicker(null)} />}
       {picker?.kind === 'pokemon' && <PokemonPicker team={teamSpecies} lang={lang} onPick={(s) => { pickSpecies(s); setPicker(null) }} onClose={() => setPicker(null)} />}
     </section>
   )
@@ -454,7 +454,7 @@ function UsageComposer({ value, onChange, lang }: { value: PokemonState; onChang
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] uppercase text-muted">{t.item}</span>
           {u.items.slice(0, 10).map(([it, pct]) => (
-            <button key={it} type="button" onClick={() => onChange({ ...value, item: it })} className={chip(value.item === it)}>{label('items', it, lang)} <span className="text-emerald-300">{pct}%</span></button>
+            <button key={it} type="button" onClick={() => onChange(withItem(value, it))} className={chip(value.item === it)}>{label('items', it, lang)} <span className="text-emerald-300">{pct}%</span></button>
           ))}
         </div>
         <div className="flex flex-col gap-0.5">

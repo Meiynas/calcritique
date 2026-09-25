@@ -343,6 +343,11 @@ Ajouté en v1.17.0 (10 septembre 2026, demande de l'humain : "de nouveaux Pokém
 - Set automatique : la forme Méga est choisie d'après la pierre (champ megaStone du moteur : Carchacrokite Z -> Méga-Carchacrok Z) ; Pokemon.getForme du moteur prenait toujours la première Méga de l'espèce.
 - Limite : les statistiques d'usage de la saison M-6 n'étaient pas encore publiées par championsbattledata.com le 10 septembre 2026 (dernier dossier : M5) ; les nouveaux Pokémon n'ont donc pas encore de "Set automatique" : il arrivera tout seul avec le robot.
 
+Ajouté en v1.18.0 (25 septembre 2026, demande de l'humain) : forme Méga respectée.
+- Choisir un Pokémon normal dans la fenêtre de choix donne le Pokémon normal : le set automatique prend l'objet le plus joué qui n'est PAS une pierre Méga (avant, il passait tout seul en Méga si la pierre était l'objet numéro 1). Choisir la forme Méga donne la Méga avec SA pierre (usage.mostPlayedSet, usage.megaStoneFor).
+- Changer l'objet garde la forme cohérente (usage.withItem, utilisé par la fenêtre d'objets et les puces d'objets des sets populaires) : une Méga qui perd sa pierre (autre objet ou aucun) redevient le Pokémon normal, avec son talent le plus joué ; un Pokémon normal qui reçoit sa pierre passe en Méga (Carchacrokite Z -> Méga-Carchacrok Z, Carchacrokite -> Méga-Carchacrok).
+- Robot réparé : depuis le 18 septembre 2026, chaque passage échouait à "npm ci" car package-lock.json gardait l'empreinte de l'ancienne archive du moteur (npm install ne la recalcule pas pour une archive locale). scripts/build-engine.sh écrit maintenant la bonne empreinte et la bonne version dans package-lock.json. 25 tests.
+
 Limites connues à traiter plus tard :
 - Le pool suit la régulation en cours (données Showdown) ; il n'y a pas de choix d'une ancienne régulation.
 - Précision : les stades de précision / esquive et les objets rares ne sont pas modélisés ; les attaques multi-coups font un seul test de précision (Triple Axel devrait en faire un par coup).
@@ -352,6 +357,7 @@ Limites connues à traiter plus tard :
 
 ## 10. Journal des décisions
 
+- 2026-09-25 : v1.18.0 : cliquer un Pokémon normal = forme normale (plus de Méga automatique), retirer la pierre = retour à la forme normale, donner la pierre = Méga. Robot de mise à jour réparé (empreinte du moteur dans package-lock.json).
 - 2026-09-10 : v1.17.0 : moteur construit depuis le GitHub de Showdown en mode Champions (génération 0) ; pool légal, attaques apprenables, noms, talents, précision et icônes régénérés automatiquement toutes les 6 heures depuis Pokémon Showdown, PokéAPI et PokeAPI/sprites. Régulation M-C intégrée (35 Pokémon et formes). Constat : la Téra n'est pas légale en M-C.
 
 - 2026-09-05 : création du projet et de ce fichier. Périmètre : Champions uniquement. Aucune décision technique définitive encore prise.
