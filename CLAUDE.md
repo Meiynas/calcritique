@@ -355,6 +355,7 @@ Ajouté en v1.19.0 (25 septembre 2026, demande de l'humain : "on clique trop vit
 - Emplacement vide : un simple clic ouvre la fenêtre de choix du Pokémon. Clavier : Entrée ou A = en A, B = en B.
 - v1.19.1 : la moitié où le Pokémon est placé reste marquée en fond (dégradé de la couleur de l'équipe depuis le bord gauche pour A, droit pour B, et grande lettre A / B en filigrane) ; en 1v1, légère teinte sur toute la carte.
 - v1.19.2 : le badge A / B devant le nom est retiré (il décalait l'icône et le nom selon que le Pokémon était en jeu ou non) ; la position se lit uniquement sur le fond de la carte.
+- v1.19.3 : le double-clic sur une carte ouvre de nouveau la fenêtre de choix du Pokémon (perdu en v1.19.0) ; il n'agit pas sur ✎, ⇄ ni sur la barre de PV.
 
 Limites connues à traiter plus tard :
 - Le pool suit la régulation en cours (données Showdown) ; il n'y a pas de choix d'une ancienne régulation.
@@ -365,6 +366,7 @@ Limites connues à traiter plus tard :
 
 ## 10. Journal des décisions
 
+- 2026-09-25 : v1.19.3 : double-clic sur une carte = changer de Pokémon (rétabli).
 - 2026-09-25 : v1.19.1 : position A / B visible en fond de carte (demande de l'humain).
 - 2026-09-25 : v1.19.0 : sélection des Pokémon en jeu par moitiés de carte (gauche = A, droite = B) et bouton ✎ pour éditer, choisi par l'humain parmi 4 options (terrain / banc, clic = mise en jeu, menu au survol, carte coupée).
 - 2026-09-25 : v1.18.0 : cliquer un Pokémon normal = forme normale (plus de Méga automatique), retirer la pierre = retour à la forme normale, donner la pierre = Méga. Robot de mise à jour réparé (empreinte du moteur dans package-lock.json).

@@ -239,6 +239,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
       onClick={(e) => onSetActive(halfAt(e.clientX, e.currentTarget))}
       onMouseMove={(e) => { const h = halfAt(e.clientX, e.currentTarget); if (h !== hoverHalf) setHoverHalf(h) }}
       onMouseLeave={() => setHoverHalf(null)}
+      onDoubleClick={onDoubleClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key.toLowerCase() === 'a') onSetActive(0)
         if (maxActive === 2 && e.key.toLowerCase() === 'b') onSetActive(1)
@@ -276,6 +277,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
             type="button"
             title={t.editCardHint}
             onClick={(e) => { e.stopPropagation(); onClick() }}
+            onDoubleClick={(e) => e.stopPropagation()}
             onMouseMove={(e) => e.stopPropagation()}
             className={'rounded border px-1.5 text-[11px] ' + (active ? (color === 'accent' ? 'border-accent bg-accent/20 text-text' : 'border-sky-400 bg-sky-400/20 text-text') : 'border-border bg-surface-2 text-muted hover:border-accent hover:text-text')}
           >
@@ -285,6 +287,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
             type="button"
             title={t.switchInTitle}
             onClick={(e) => { e.stopPropagation(); onSwitch() }}
+            onDoubleClick={(e) => e.stopPropagation()}
             onMouseMove={(e) => e.stopPropagation()}
             className="rounded border border-border bg-surface-2 px-1.5 text-[11px] text-muted hover:border-accent hover:text-text"
           >
@@ -296,7 +299,7 @@ function MonCard({ mon, active, onField, fieldPos, maxActive, onSetActive, onCli
         <span className="min-w-0 truncate">{mon.item ? label('items', mon.item, lang) : t.none}{mon.teraType ? ` · Tera ${label('types', mon.teraType, lang)}${mon.teraActive ? '' : ' (off)'}` : ''}</span>
         <span className="flex shrink-0 items-center gap-0.5">{sp.types.map((ty) => <TypeBadge key={ty} type={ty} lang={lang} small />)}</span>
       </div>
-      <div className="relative mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onMouseMove={(e) => { e.stopPropagation(); if (hoverHalf !== null) setHoverHalf(null) }}>
+      <div className="relative mt-1 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onMouseMove={(e) => { e.stopPropagation(); if (hoverHalf !== null) setHoverHalf(null) }}>
         <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/10">
           <div className={'absolute inset-y-0 left-0 rounded-full ' + hpColor} style={{ width: `${mon.curHPPercent}%` }} />
           <input
