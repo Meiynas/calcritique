@@ -1,6 +1,6 @@
 [package]
 name = "calcritique"
-version = "1.19.41"
+version = "1.19.42"
 description = "Calcritique : calculateur de dégâts pour Pokémon Champions"
 authors = ["Meiynas"]
 edition = "2021"
