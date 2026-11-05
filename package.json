@@ -1,7 +1,7 @@
 {
   "name": "calcritique",
   "private": true,
-  "version": "1.19.71",
+  "version": "1.19.72",
   "type": "module",
   "scripts": {
     "dev": "vite",
